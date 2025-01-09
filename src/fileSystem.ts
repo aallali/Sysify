@@ -6,13 +6,22 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/07 13:37:00 by aallali                                  */
+/*   Updated: 2025/01/11 01:01:02 by aallali                                  */
 /* ************************************************************************** */
 
 import logger from "./logger"
 
 export class FileSystem {
-	private currentDir: string = '/'
+	private currentDir: string
+
+	constructor() {
+		this.currentDir = process.cwd() // Start in the Node.js process's working directory
+		logger.info(`Current directory: ${this.pwd()}`)
+	}
+
+	public pwd(): string {
+		return this.currentDir
+	}
 
 	public mkdir(dirName: string): void {
 		logger.info(`Creating directory: ${dirName}`)
