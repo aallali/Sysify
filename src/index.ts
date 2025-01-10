@@ -10,33 +10,15 @@
 /* ************************************************************************** */
 
 import { FileSystem } from './fileSystem'
-import logger from './logger'
-
+ 
 const main = () => {
 	const fs = new FileSystem()
 
-	// print all log levels
-	logger.debug('Debug message')
-	logger.info('Info message')
-	logger.warn('Warn message')
-	logger.error('Error message')
-	
-	// Create a new directory
-	fs.mkdir('documents')
-
-	// Change to the new directory
-	fs.cd('documents')
-
-	// Create a new file in the current directory
-	fs.touch('notes.txt', 'This is a simple note.')
-
-	// List the contents of the current directory
-	logger.info("Contents of 'documents':", fs.ls())
-
-	// Save the current file system to a JSON file
-	fs.save('filesystem.json')
-
-	logger.info('File System operations completed.')
+	fs.cd('/')
+	fs.cd('../')
+	try {
+		fs.cd('src/')
+	} catch { /* empty */ }
 }
 
 // Run the main function
