@@ -10,7 +10,8 @@
 /* ************************************************************************** */
 
 import { FileSystem } from './fileSystem'
- 
+import logger from './logger'
+
 const main = () => {
 	const fs = new FileSystem()
 
@@ -18,7 +19,16 @@ const main = () => {
 	fs.cd('../')
 	try {
 		fs.cd('src/')
-	} catch { /* empty */ }
+	} catch {
+		/* empty */
+	}
+
+	// test all logger methods
+	logger.info('info message')
+	logger.warn('warn message')
+	logger.error('error message')
+	logger.debug('debug message')
+	logger.info('info message with args', 'arg1', 'arg2')
 }
 
 // Run the main function

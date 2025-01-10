@@ -6,55 +6,74 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/07 13:37:00 by aallali                                  */
+/*   Updated: 2025/01/11 01:08:01 by aallali                                  */
 /* ************************************************************************** */
 
-type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+type LogLevel = 'info' | 'warn' | 'error' | 'debug' | 'off'
 
 class Logger {
-    private logLevel: LogLevel;
-    private source: string;
-    constructor(logLevel: LogLevel = 'info', source = '') {
-        this.logLevel = logLevel;
-        this.source = source ? ` [${source}]` : '';
-    }
+	private logLevel: LogLevel
+	private source: string
 
-    private shouldLog(level: LogLevel): boolean {
-        const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
-        return levels.indexOf(level) >= levels.indexOf(this.logLevel);
-    }
+	constructor(logLevel: LogLevel = 'info', source = '') {
+		this.logLevel = logLevel
+		this.source = source ? ` [${source}]` : ''
+	}
 
-    private log(level: LogLevel, message: string, ...args: unknown[]): void {
-        if (this.shouldLog(level)) {
-            const timestamp = new Date().toISOString();
-            console[level === 'debug' ? 'log' : level](
-                `[${timestamp}] [${level.toUpperCase()}]${this.source}: ${message}`,
-                ...args
-            );
-        }
-    }
+	private shouldLog(level: LogLevel): boolean {
+		if (this.logLevel === 'off') return false
+		const levels: LogLevel[] = ['debug', 'info', 'warn', 'error']
+		return levels.indexOf(level) >= levels.indexOf(this.logLevel)
+	}
 
-    info(message: string, ...args: unknown[]): void {
-        this.log('info', message, ...args);
-    }
+	private getColor(level: LogLevel): string {
+		const colors: Record<LogLevel, string> = {
+			info: '\x1b[34m', // Blue
+			warn: '\x1b[33m', // Yellow
+			error: '\x1b[31m', // Red
+			debug: '\x1b[90m', // Gray
+			off: '\x1b[37m', // White (default, unused)
+		}
+		return colors[level] || '\x1b[37m'
+	}
 
-    warn(message: string, ...args: unknown[]): void {
-        this.log('warn', message, ...args);
-    }
+	private resetColor(): string {
+		return '\x1b[0m'
+	}
 
-    error(message: string, ...args: unknown[]): void {
-        this.log('error', message, ...args);
-    }
+	private log(level: LogLevel, message: string, ...args: unknown[]): void {
+		if (!this.shouldLog(level)) return
 
-    debug(message: string, ...args: unknown[]): void {
-        this.log('debug', message, ...args);
-    }
+		const timestamp = `\x1b[32m${new Date().toISOString()}${this.resetColor()}` // Green for timestamp
+		const coloredLevel = `${this.getColor(level)}[${level.toUpperCase()}]${this.resetColor()}`
+		const coloredSource = `\x1b[36m${this.source}${this.resetColor()}` // Cyan for source
+
+		console[
+			level === 'debug' ? 'log' : (level as 'info' | 'warn' | 'error')
+		](`${timestamp} ${coloredLevel}${coloredSource}: ${message}`, ...args)
+	}
+
+	info(message: string, ...args: unknown[]): void {
+		this.log('info', message, ...args)
+	}
+
+	warn(message: string, ...args: unknown[]): void {
+		this.log('warn', message, ...args)
+	}
+
+	error(message: string, ...args: unknown[]): void {
+		this.log('error', message, ...args)
+	}
+
+	debug(message: string, ...args: unknown[]): void {
+		this.log('debug', message, ...args)
+	}
 }
 
-// Read log level from environment variable, default to 'info'
-const logLevel = (process.env.LOG_LEVEL as LogLevel) || 'warn';
+// Read log level from environment variable, default to 'warn'
+const logLevel = (process.env.LOG_LEVEL as LogLevel) || 'warn'
 
 // Export a single logger instance
-const logger = new Logger(logLevel, 'sysify');
+const logger = new Logger(logLevel, 'sysify')
 
-export default logger;
+export default logger
