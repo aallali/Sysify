@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/11 11:43:23 by aallali                                  */
-/*   Updated: 2025/01/11 13:42:14 by aallali                                  */
+/*   Updated: 2025/01/11 15:30:01 by aallali                                  */
 /* ************************************************************************** */
 
 import { FileSystem } from './fileSystem'
@@ -26,7 +26,10 @@ const test = () => {
 		/* empty */
 	}
 	fs.cd(`home/${USERNAME}/SySiFy`) // handles case-insensitive paths
-	logger.info(`List of files in the ${fs.pwd()} directory:`, fs.ls())
+	logger.info(`List of files in the [${fs.pwd()}] directory:`, fs.ls())
+	fs.cd('src/')
+	logger.info(`List of files in the [${fs.pwd()}] directory:`, fs.ls())
+
 	// test all logger methods
 	logger.info('info message')
 	logger.warn('warn message')

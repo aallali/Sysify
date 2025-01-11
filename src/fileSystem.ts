@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/11 01:04:30 by aallali                                  */
+/*   Updated: 2025/01/11 15:16:03 by aallali                                  */
 /* ************************************************************************** */
 
 import fs from 'fs'
@@ -85,9 +85,35 @@ export class FileSystem {
 		// Implement logic
 	}
 
-	public ls(): string[] {
-		logger.info(`Listing files in: ${this.currentDir}`)
-		return []
+	public ls(targetPath?: string): string[] {
+		const dirToRead = targetPath
+			? path.resolve(this.currentDir, targetPath)
+			: this.currentDir
+
+		if (
+			!fs.existsSync(dirToRead) ||
+			!fs.statSync(dirToRead).isDirectory()
+		) {
+			logger.error(
+				`Path '${dirToRead}' does not exist or is not a directory.`,
+			)
+			throw new Error(
+				`Path '${dirToRead}' does not exist or is not a directory.`,
+			)
+		}
+
+		try {
+			const entries = fs.readdirSync(dirToRead)
+			const listing = entries.map((entry) => {
+				const fullPath = path.join(dirToRead, entry)
+				return fs.statSync(fullPath).isDirectory() ? entry + '/' : entry
+			})
+
+			return listing
+		} catch (error) {
+			logger.error(`Failed to list files in: ${dirToRead}`)
+			throw error
+		}
 	}
 
 	public save(fileName: string): void {
