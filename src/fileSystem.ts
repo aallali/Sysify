@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/11 15:16:03 by aallali                                  */
+/*   Updated: 2025/01/11 16:11:15 by aallali                                  */
 /* ************************************************************************** */
 
 import fs from 'fs'
@@ -26,8 +26,17 @@ export class FileSystem {
 	}
 
 	public mkdir(dirName: string): void {
-		logger.info(`Creating directory: ${dirName}`)
-		// Implement logic
+		if (!dirName) {
+			throw new Error('mkdir: missing operand')
+		}
+		const newDirPath = path.join(this.currentDir, dirName);
+	
+		if (fs.existsSync(newDirPath)) {
+			throw new Error(`mkdir: cannot create directory '${dirName}': File exists`);
+		}
+	
+		fs.mkdirSync(newDirPath);
+		logger.debug(`Directory created: ${newDirPath}`);
 	}
 
 	public cd(dirName: string): void {
@@ -52,6 +61,7 @@ export class FileSystem {
 			throw new Error(errorMsg) // Re-throw the error with a custom message
 		}
 	}
+
 	private resolveCaseInsensitivePath(dirName: string): string {
 		const resolvedPath = path.resolve(this.currentDir, dirName)
 
