@@ -6,8 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "LOG_LEVEL=debug nodemon src/index.ts",
+    "start": "node dist/test.ts",
+    "dev": "LOG_LEVEL=debug nodemon src/test.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write src/",
