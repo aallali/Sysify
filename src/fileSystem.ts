@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/11 16:11:15 by aallali                                  */
+/*   Updated: 2025/01/11 18:01:53 by aallali                                  */
 /* ************************************************************************** */
 
 import fs from 'fs'
@@ -29,14 +29,16 @@ export class FileSystem {
 		if (!dirName) {
 			throw new Error('mkdir: missing operand')
 		}
-		const newDirPath = path.join(this.currentDir, dirName);
-	
+		const newDirPath = path.join(this.currentDir, dirName)
+
 		if (fs.existsSync(newDirPath)) {
-			throw new Error(`mkdir: cannot create directory '${dirName}': File exists`);
+			throw new Error(
+				`mkdir: cannot create directory '${dirName}': File exists`,
+			)
 		}
-	
-		fs.mkdirSync(newDirPath);
-		logger.debug(`Directory created: ${newDirPath}`);
+
+		fs.mkdirSync(newDirPath)
+		logger.debug(`Directory created: ${newDirPath}`)
 	}
 
 	public cd(dirName: string): void {
@@ -91,8 +93,16 @@ export class FileSystem {
 	}
 
 	public touch(fileName: string, content: string = ''): void {
-		logger.info(`Creating file: ${fileName} with content: ${content}`)
-		// Implement logic
+		const newFilePath = path.join(this.currentDir, fileName)
+
+		if (fs.existsSync(newFilePath)) {
+			throw new Error(
+				`touch: cannot create file '${fileName}': File exists`,
+			)
+		}
+
+		fs.writeFileSync(newFilePath, content)
+		logger.debug(`File created: ${newFilePath}`)
 	}
 
 	public ls(targetPath?: string): string[] {
