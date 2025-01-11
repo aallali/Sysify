@@ -1,44 +1,70 @@
 {
-  "name": "sysify",
-  "version": "1.0.0",
-  "description": "**🌟 A Lightweight, TypeScript-Powered File System for Node.js 🌟**",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/test.ts",
-    "dev": "LOG_LEVEL=debug nodemon src/test.ts",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "format": "prettier --write src/",
-    "test": "LOG_LEVEL=off jest",
-    "test:watch": "LOG_LEVEL=off jest --watch",
-    "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm test",
-    "publish:npm": "npm publish",
-    "unpublish:npm": "npm unpublish",
-    "version": "npm run build",
-    "postpublish": "echo 'Successfully published to npm!'"
-  },
-  "keywords": [],
-  "author": "Abdellah Allali <hi@allali.me>",
-  "license": "MIT",
-  "dependencies": {
-    "@types/node": "^22.10.5",
-    "typescript": "^5.7.2"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.17.0",
-    "@types/jest": "^29.5.14",
-    "eslint": "^9.17.0",
-    "eslint-config-prettier": "^9.1.0",
-    "globals": "^15.14.0",
-    "jest": "^29.7.0",
-    "prettier": "^3.4.2",
-    "ts-jest": "^29.2.5",
-    "ts-node": "^10.9.2",
-    "typescript-eslint": "^8.19.1"
-  }
+	"name": "sysify",
+	"version": "1.0.0",
+	"description": "**🌟 A Lightweight, TypeScript-Powered File System for Node.js 🌟**",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"start": "node dist/test.ts",
+		"dev": "LOG_LEVEL=debug nodemon src/test.ts",
+		"lint": "eslint src/",
+		"lint:fix": "eslint src/ --fix",
+		"format": "prettier --write src/",
+		"test": "LOG_LEVEL=off jest",
+		"test:watch": "LOG_LEVEL=off jest --watch",
+		"clean": "rm -rf dist",
+		"type-check": "tsc --noEmit",
+		"prepare": "npm run build",
+		"prepublishOnly": "npm test",
+		"publish:npm": "npm publish",
+		"unpublish:npm": "npm unpublish",
+		"version": "npm run build",
+		"postpublish": "echo 'Successfully published to npm!'"
+	},
+	"keywords": [
+		"sysify",
+		"filesystem",
+		"nodejs",
+		"typescript",
+		"file",
+		"directory",
+		"fs",
+		"path",
+		"read",
+		"write",
+		"delete",
+		"copy",
+		"move",
+		"rename",
+		"watch",
+		"watcher",
+		"watching"
+	],
+	"author": "Abdellah Allali <hi+sysify@allali.me>",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/aallali/Sysify"
+	},
+	"bugs": {
+		"url": "https://github.com/aallali/Sysify/issues"
+	},
+	"homepage": "https://github.com/aallali/Sysify#readme",
+	"license": "MIT",
+	"dependencies": {
+		"@types/node": "^22.10.5",
+		"typescript": "^5.7.2"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.17.0",
+		"@types/jest": "^29.5.14",
+		"eslint": "^9.17.0",
+		"eslint-config-prettier": "^9.1.0",
+		"globals": "^15.14.0",
+		"jest": "^29.7.0",
+		"prettier": "^3.4.2",
+		"ts-jest": "^29.2.5",
+		"ts-node": "^10.9.2",
+		"typescript-eslint": "^8.19.1"
+	}
 }
