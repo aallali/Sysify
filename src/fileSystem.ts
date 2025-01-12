@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/11 18:01:53 by aallali                                  */
+/*   Updated: 2025/01/12 23:52:21 by aallali                                  */
 /* ************************************************************************** */
 
 import fs from 'fs'
@@ -18,7 +18,7 @@ export class FileSystem {
 
 	constructor() {
 		this.currentDir = process.cwd() // Start in the Node.js process's working directory
-		logger.info(`Current directory: ${this.pwd()}`)
+		logger.debug(`Current directory: ${this.pwd()}`)
 	}
 
 	public pwd(): string {
@@ -50,7 +50,7 @@ export class FileSystem {
 			}
 
 			this.currentDir = newDir
-			logger.info(`Changed directory to: ${this.currentDir}`)
+			logger.debug(`Changed directory to: ${this.currentDir}`)
 		} catch (error: unknown) {
 			let errorMsg = `cd: no such file or directory: ${dirName}`
 
@@ -92,7 +92,7 @@ export class FileSystem {
 		return path.join(parentDir, match)
 	}
 
-	public touch(fileName: string, content: string = ''): void {
+	public touch(fileName: string, content: string | Buffer = ''): void {
 		const newFilePath = path.join(this.currentDir, fileName)
 
 		if (fs.existsSync(newFilePath)) {
@@ -101,7 +101,10 @@ export class FileSystem {
 			)
 		}
 
-		fs.writeFileSync(newFilePath, content)
+		const bufferContent = Buffer.isBuffer(content)
+			? content
+			: Buffer.from(content, 'utf-8')
+		fs.writeFileSync(newFilePath, bufferContent)
 		logger.debug(`File created: ${newFilePath}`)
 	}
 
@@ -137,7 +140,7 @@ export class FileSystem {
 	}
 
 	public save(fileName: string): void {
-		logger.info(`Saving file system to: ${fileName}`)
+		logger.debug(`Saving file system to: ${fileName}`)
 		// Implement logic
 	}
 }
