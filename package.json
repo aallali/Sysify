@@ -1,12 +1,11 @@
 {
 	"name": "sysify",
-	"version": "1.0.0",
-	"description": "**🌟 A Lightweight, TypeScript-Powered File System for Node.js 🌟**",
+	"version": "0.0.0",
+	"description": "A Lightweight, TypeScript-Powered File System for Node.js",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"scripts": {
 		"build": "tsc",
-		"start": "node dist/test.ts",
 		"dev": "LOG_LEVEL=debug nodemon src/test.ts",
 		"lint": "eslint src/",
 		"lint:fix": "eslint src/ --fix",
@@ -51,13 +50,11 @@
 	},
 	"homepage": "https://github.com/aallali/Sysify#readme",
 	"license": "MIT",
-	"dependencies": {
-		"@types/node": "^22.10.5",
-		"typescript": "^5.7.2"
-	},
+	"dependencies": {},
 	"devDependencies": {
 		"@eslint/js": "^9.17.0",
 		"@types/jest": "^29.5.14",
+		"@types/node": "^22.10.5",
 		"@types/tmp": "^0.2.6",
 		"eslint": "^9.17.0",
 		"eslint-config-prettier": "^9.1.0",
@@ -67,6 +64,7 @@
 		"tmp": "^0.2.3",
 		"ts-jest": "^29.2.5",
 		"ts-node": "^10.9.2",
+		"typescript": "^5.7.2",
 		"typescript-eslint": "^8.19.1"
 	}
 }
