@@ -19,6 +19,20 @@ describe('FileSystem - CD command', () => {
 		)
 	})
 
+	test('should throw error given invalid parent directory path', () => {
+		const invalidDir = `${fs.pwd()}/404/non-existent-dir`
+		expect(() => fs.cd(invalidDir)).toThrow(
+			`cd: no such file or directory: ${fs.pwd()}/404`,
+		)
+	})
+
+	test('should throw error given a file path', () => {
+		const filePath = 'meta.json'
+		expect(() => fs.cd(filePath)).toThrow(
+			`cd: not a directory: ${filePath}`,
+		)
+	})
+
 	test('should "cd" to parent directory', () => {
 		fs.cd('src/')
 		expect(fs.pwd()).toBe(process.cwd() + '/src')
