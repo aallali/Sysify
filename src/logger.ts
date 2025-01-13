@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/11 01:08:01 by aallali                                  */
+/*   Updated: 2025/01/13 16:31:22 by aallali                                  */
 /* ************************************************************************** */
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug' | 'off'
@@ -77,3 +77,4 @@ const logLevel = (process.env.LOG_LEVEL as LogLevel) || 'warn'
 const logger = new Logger(logLevel, 'sysify')
 
 export default logger
+export { Logger }
