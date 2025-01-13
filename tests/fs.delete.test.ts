@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/13 16:15:06 by aallali                                  */
-/*   Updated: 2025/01/13 17:22:41 by aallali                                  */
+/*   Updated: 2025/01/13 22:34:43 by aallali                                  */
 /* ************************************************************************** */
 
 import tmp from 'tmp'
@@ -87,7 +87,7 @@ describe('FileSystem - DELETE command', () => {
 		const nonExistentPath = 'non-existent-file.txt'
 
 		expect(() => {
-			fs.delete(nonExistentPath, { silent: true })
+			fs.delete(nonExistentPath, { silent: true, force: true })
 		}).not.toThrow()
 	})
 })
