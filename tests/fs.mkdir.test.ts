@@ -18,6 +18,12 @@ describe('FileSystem - MKDIR command', () => {
 		fs.delete(tempDir, { recursive: true }) // Automatically deletes temp directory
 	})
 
+	test('should throw error when no input given', () => {
+		expect(() => {
+			fs.mkdir('')
+		}).toThrow('mkdir: missing operand')
+	})
+
 	test('should create a new directory in the current directory', () => {
 		fs.mkdir('new-dir')
 		expect(fs.ls()).toContain('new-dir/')
@@ -30,6 +36,13 @@ describe('FileSystem - MKDIR command', () => {
 		}).toThrow(
 			"mkdir: cannot create directory 'existing-dir': Directory exists",
 		)
+	})
+
+	test('should not throw an error if the directory already exists and options.silent=true', () => {
+		expect(() => {
+			fs.mkdir('existing-dir-2')
+			fs.mkdir('existing-dir-2', { silent: true })
+		}).not.toThrow()
 	})
 
 	test('should allow creating multiple directories', () => {
