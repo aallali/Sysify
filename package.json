@@ -4,6 +4,10 @@
 	"description": "A Lightweight, TypeScript-Powered File System for Node.js",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"files": [
+		"dist/",
+		"README.md"
+	],
 	"scripts": {
 		"build": "tsc",
 		"dev": "LOG_LEVEL=debug nodemon src/test.ts",
