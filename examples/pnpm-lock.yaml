@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      sysify:
+        specifier: ^0.1.0-beta.1
+        version: 0.1.0-beta.1
+
+packages:
+
+  sysify@0.1.0-beta.1:
+    resolution: {integrity: sha512-KzqiLV2m34mGjEAoT1zQT1QQr00pOJJFc5CXkUGMbkJlCpm1OGUGaVpf7woJm+CkihqnY3owLLfOhA2Svyh4lA==}
+
+snapshots:
+
+  sysify@0.1.0-beta.1: {}
