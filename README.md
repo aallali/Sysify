@@ -1,6 +1,6 @@
 # Sysify
 
-**🌟 A Lightweight, TypeScript-Powered File System for Node.js 🌟**
+**✨ A Lightweight, TypeScript-Powered File System Wrapper for Node.js ✨**
 
 [![📘 TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![🟢 Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -9,40 +9,83 @@
 [![🐛 GitHub Issues](https://img.shields.io/github/issues/aallali/sysify)](https://github.com/aallali/sysify/issues)
 [![⭐ GitHub Stars](https://img.shields.io/github/stars/aallali/sysify)](https://github.com/aallali/sysify/stargazers)
 [![🔗 GitHub Forks](https://img.shields.io/github/forks/aallali/sysify)](https://github.com/aallali/sysify/network/members)
-[![npm (tag)](https://img.shields.io/npm/v/typefs/latest)](https://www.npmjs.com/package/typefs)
 
-**`Sysify`** is a minimal yet powerful file system library built with **Node.js** and **TypeScript**. Designed for developers who need a simple, customizable, and extensible way to manage files and directories programmatically, sysify provides an intuitive API for creating, navigating, and persisting file systems. Whether you're building tools, utilities, or experimenting with file system concepts, sysify is the perfect lightweight solution. 🚀
+
+**`Sysify`** is a lightweight yet powerful wrapper for the Node.js filesystem module, providing an intuitive and typed API for essential terminal-like commands. It’s designed to enable developers to write scripts for managing files and directories quickly and efficiently.
+
+With `Sysify`, you can leverage commands like `mkdir`, `cd`, `ls`, `touch`, `rm`, and more in a way that feels natural to developers familiar with terminal commands.
 
 ---
 
 ## ✨ Features
 
-- **📂 Hierarchical File System**: Create and manage files and directories in a tree-like structure.
-- **📝 Metadata Support**: Track file size, permissions, and timestamps.
-- **💾 Persistence**: Save and load file systems to/from disk using JSON.
-- **✔️ Type-Safe API**: Built with TypeScript for robust and error-free development.
-- **🔌 Extensible**: Easily add custom features like permissions, compression, or remote storage.
+- **📂 Essential Terminal Commands**: Execute familiar file system operations programmatically (“e.g., mkdir, ls, rm”).
+- **📚 Typed and Extensible API**: Built with TypeScript for type safety and scalability.
+- **🔧 Script-Friendly**: Simplify writing automation scripts and utilities.
+- **📝 Metadata Tracking**: Access file and directory metadata like size and permissions.
+- **💰 Lightweight and Fast**: Optimized for minimal overhead while retaining robust functionality.
 
 ---
 
 ## 📥 Installation
 
+Install `sysify` via _`pnpm`_:
+
 ```bash
-npm install sysify
+pnpm install sysify
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-```typescript
-import { FileSystem } from 'sysify'
-import logger from './logger'
+Here’s a quick example of how to get started with `Sysify`:
 
-const fs = new FileSystem()
-fs.mkdir('documents')
-fs.cd('documents')
-fs.touch('notes.txt', 'This is a simple note.')
-logger.debug(fs.ls()) // Output: ['notes.txt']
-fs.save('filesystem.json')
+```typescript
+import { FileSystem } from 'sysify';
+
+const fs = new FileSystem();
+
+// Create a new directory
+fs.mkdir('projects');
+
+// Navigate into the directory
+fs.cd('projects');
+
+// Create a new file with content
+fs.touch('readme.txt', 'Welcome to Sysify!');
+
+// List contents of the current directory
+console.log(fs.ls()); // Output: ['readme.txt']
+
+// Delete the file
+fs.delete('readme.txt');
+
+// Go back to the root directory
+fs.cd('..');
+
+// Delete "projects" folder (a.k.a 'rm -rf projects/')
+fs.delete('projects')
 ```
+
+---
+
+## 🔧 Supported Commands
+
+### File and Directory Management
+- **`mkdir(directory: string, options: { silent: boolean } = {})`**: Create a new directory.
+- **`cd(directory: string)`**: Change the current working directory.
+- **`ls()`**: List contents of the current directory.
+- **`touch(file: string, content?: string | Buffer)`**: Create a new file.
+- **`delete(target: string, options: { recursive?: boolean, silent: boolean, force?: boolean } = {})`**: Remove a file or directory.
+
+### Metadata
+- **`pwd()`**: Get the current working directory.
+
+---
+
+## ⚡ Why Sysify?
+
+- **Ease of Use**: Intuitive API that mirrors terminal commands.
+- **Type Safety**: Reduce errors and improve code clarity with TypeScript.
+- **Customization**: Easily extend functionality to meet your specific needs.
