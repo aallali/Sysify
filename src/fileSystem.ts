@@ -6,13 +6,13 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/13 18:03:18 by aallali                                  */
+/*   Updated: 2025/01/13 18:03:31 by aallali                                  */
 /* ************************************************************************** */
 
 import fs from 'fs'
 import path from 'path'
 import logger from './logger'
-import type { DeleteOptions } from './fileSystem.type'
+import type { DeleteOptions, MkdirOptions } from './fileSystem.type'
 
 export class FileSystem {
 	private currentDir: string
@@ -26,16 +26,21 @@ export class FileSystem {
 		return this.currentDir
 	}
 
-	public mkdir(dirName: string): void {
+	public mkdir(dirName: string, options: MkdirOptions = {}): void {
 		if (!dirName) {
 			throw new Error('mkdir: missing operand')
 		}
 		const newDirPath = path.join(this.currentDir, dirName)
 
 		if (fs.existsSync(newDirPath)) {
-			throw new Error(
-				`mkdir: cannot create directory '${dirName}': File exists`,
-			)
+			if (!options.silent) {
+				logger.debug(`Directory already exists: ${newDirPath}`)
+				throw new Error(
+					`mkdir: cannot create directory '${dirName}': Directory exists`,
+				)
+			} else {
+				return
+			}
 		}
 
 		fs.mkdirSync(newDirPath)
@@ -106,7 +111,7 @@ export class FileSystem {
 			? content
 			: Buffer.from(content, 'utf-8')
 		fs.writeFileSync(newFilePath, bufferContent)
-		logger.debug(`File created: ${newFilePath}`)
+		logger.info(`File created: ${newFilePath}`)
 	}
 
 	public ls(targetPath?: string): string[] {

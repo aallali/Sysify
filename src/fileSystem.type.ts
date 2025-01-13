@@ -3,3 +3,7 @@ export interface DeleteOptions {
 	force?: boolean
 	silent?: boolean
 }
+
+export interface MkdirOptions {
+	silent?: boolean
+}
