@@ -6,12 +6,13 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/12 23:52:21 by aallali                                  */
+/*   Updated: 2025/01/13 18:03:18 by aallali                                  */
 /* ************************************************************************** */
 
 import fs from 'fs'
 import path from 'path'
 import logger from './logger'
+import type { DeleteOptions } from './fileSystem.type'
 
 export class FileSystem {
 	private currentDir: string
@@ -139,8 +140,64 @@ export class FileSystem {
 		}
 	}
 
-	public save(fileName: string): void {
-		logger.debug(`Saving file system to: ${fileName}`)
-		// Implement logic
+	public delete(target: string, options: DeleteOptions = {}): void {
+		const { recursive = false, force = false, silent = false } = options
+		const targetPath = path.resolve(this.currentDir, target)
+
+		try {
+			if (!fs.existsSync(targetPath)) {
+				if (!force) {
+					throw new Error(
+						`delete: cannot delete '${target}': No such file or directory`,
+					)
+				}
+				if (!silent) {
+					logger.info(`delete: '${target}' does not exist`)
+				}
+				return
+			}
+
+			const stats = fs.statSync(targetPath)
+
+			if (stats.isDirectory()) {
+				if (!recursive) {
+					throw new Error(
+						`delete: '${target}' is a directory (use recursive option to delete)`,
+					)
+				}
+				for (const entry of fs.readdirSync(targetPath)) {
+					this.delete(path.join(target, entry), {
+						recursive,
+						force,
+						silent,
+					})
+				}
+				fs.rmdirSync(targetPath)
+			} else {
+				fs.unlinkSync(targetPath)
+			}
+
+			if (!silent) {
+				logger.info(`Deleted: ${targetPath}`)
+			}
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				{
+					if (!silent && error instanceof Error) {
+						logger.error(error.message)
+					}
+					if (!silent && !force) {
+						if (error instanceof Error) {
+							throw error
+						} else {
+							throw new Error('An unknown error occurred.')
+						}
+					}
+				}
+			} else {
+				logger.error('[DELETE] error: ', error)
+				throw new Error(JSON.stringify(error))
+			}
+		}
 	}
 }
