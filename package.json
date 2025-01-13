@@ -1,6 +1,6 @@
 {
 	"name": "sysify",
-	"version": "0.0.0",
+	"version": "0.1.0-beta.1",
 	"description": "A Lightweight, TypeScript-Powered File System for Node.js",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -17,6 +17,7 @@
 		"prepare": "npm run build",
 		"prepublishOnly": "npm test",
 		"publish:npm": "npm publish",
+		"publish:beta": "npm version prerelease --preid=beta && npm publish --tag beta",
 		"unpublish:npm": "npm unpublish",
 		"version": "npm run build",
 		"postpublish": "echo 'Successfully published to npm!'"
