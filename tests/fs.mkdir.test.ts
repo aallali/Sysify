@@ -1,18 +1,21 @@
-import tmp from 'tmp'
 import { FileSystem } from '../src/fileSystem'
+import { uuidv4 } from './helpers/generateRandomId'
 
 describe('FileSystem - MKDIR command', () => {
 	let fs: FileSystem
-	let tempDir: tmp.DirResult
+	let tempDir: string
 
 	beforeEach(() => {
-		tempDir = tmp.dirSync({ unsafeCleanup: true })
+		tempDir = `tmp-${uuidv4()}`
 		fs = new FileSystem()
-		fs.cd(tempDir.name)
+
+		fs.mkdir(tempDir, { silent: true })
+		fs.cd(tempDir)
 	})
 
 	afterEach(() => {
-		tempDir.removeCallback() // Automatically deletes temp directory
+		fs.cd('..')
+		fs.delete(tempDir, { recursive: true }) // Automatically deletes temp directory
 	})
 
 	test('should create a new directory in the current directory', () => {
@@ -24,7 +27,9 @@ describe('FileSystem - MKDIR command', () => {
 		fs.mkdir('existing-dir')
 		expect(() => {
 			fs.mkdir('existing-dir')
-		}).toThrow("mkdir: cannot create directory 'existing-dir': File exists")
+		}).toThrow(
+			"mkdir: cannot create directory 'existing-dir': Directory exists",
+		)
 	})
 
 	test('should allow creating multiple directories', () => {
