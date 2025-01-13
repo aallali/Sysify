@@ -15,6 +15,7 @@
 		"lint:fix": "eslint src/ --fix",
 		"format": "prettier --write src/",
 		"test": "LOG_LEVEL=off jest",
+		"test:coverage": "LOG_LEVEL=off jest --coverage",
 		"test:watch": "LOG_LEVEL=off jest --watch",
 		"clean": "rm -rf dist",
 		"type-check": "tsc --noEmit",
