@@ -9,7 +9,7 @@
 [![🐛 GitHub Issues](https://img.shields.io/github/issues/aallali/sysify)](https://github.com/aallali/sysify/issues)
 [![⭐ GitHub Stars](https://img.shields.io/github/stars/aallali/sysify)](https://github.com/aallali/sysify/stargazers)
 [![🔗 GitHub Forks](https://img.shields.io/github/forks/aallali/sysify)](https://github.com/aallali/sysify/network/members)
-
+[![🔧 codecov](https://codecov.io/github/aallali/Sysify/graph/badge.svg?token=M5NQEJ0TXB)](https://codecov.io/github/aallali/Sysify)
 
 **`Sysify`** is a lightweight yet powerful wrapper for the Node.js filesystem module, providing an intuitive and typed API for essential terminal-like commands. It’s designed to enable developers to write scripts for managing files and directories quickly and efficiently.
 
