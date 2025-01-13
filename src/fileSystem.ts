@@ -6,7 +6,7 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/13 18:03:31 by aallali                                  */
+/*   Updated: 2025/01/13 22:31:17 by aallali                                  */
 /* ************************************************************************** */
 
 import fs from 'fs'
@@ -186,22 +186,18 @@ export class FileSystem {
 				logger.info(`Deleted: ${targetPath}`)
 			}
 		} catch (error: unknown) {
+			let errorMsg = `delete: error when delete: ${target} : ${JSON.stringify(error)}`
+
+			// Handle error based on its type
 			if (error instanceof Error) {
-				{
-					if (!silent && error instanceof Error) {
-						logger.error(error.message)
-					}
-					if (!silent && !force) {
-						if (error instanceof Error) {
-							throw error
-						} else {
-							throw new Error('An unknown error occurred.')
-						}
-					}
-				}
-			} else {
-				logger.error('[DELETE] error: ', error)
-				throw new Error(JSON.stringify(error))
+				errorMsg = `${error.message}`
+			}
+
+			if (!silent) {
+				logger.error(errorMsg)
+			}
+			if (!force) {
+				throw new Error(errorMsg)
 			}
 		}
 	}
