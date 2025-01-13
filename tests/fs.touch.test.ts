@@ -1,7 +1,19 @@
+/* ************************************************************************** */
+/*   Copyright 2025 <Sysify>                                                  */
+/*                                                                            */
+/*   File    : fs.touch.test.ts                                               */
+/*   Project : Sysify                                                         */
+/*   License : MIT                                                            */
+/*                                                                            */
+/*   Created: 2025/01/11 18:11:36 by aallali                                  */
+/*   Updated: 2025/01/13 15:32:26 by aallali                                  */
+/* ************************************************************************** */
+
+import nodeFS from 'fs'
 import tmp from 'tmp'
 import { FileSystem } from '../src/fileSystem'
 
-describe('FileSystem - TOUCH command', () => {
+describe('FileSystem - TOUCH command with Buffer support', () => {
 	let fs: FileSystem
 	let tempDir: tmp.DirResult
 
@@ -15,20 +27,58 @@ describe('FileSystem - TOUCH command', () => {
 		tempDir.removeCallback() // Automatically deletes temp directory
 	})
 
-	test('should create a new file in the current directory', () => {
-		fs.touch('new-file.txt', 'Sample content')
-		expect(fs.ls()).toContain('new-file.txt')
+	test('should create a new file with UTF-8 string content and verify content', () => {
+		const fileName = 'utf8-file.txt'
+		const content = 'Sample UTF-8 content'
+		fs.touch(fileName, content)
+		expect(fs.ls()).toContain(fileName)
+		const filePath = `${tempDir.name}/${fileName}`
+		expect(nodeFS.readFileSync(filePath, 'utf-8')).toBe(content)
 	})
 
-	test('should throw an error if the file already exists', () => {
+	test('should create a new file with binary data (Buffer) and verify content', () => {
+		const fileName = 'binary-file.bin'
+		const binaryData = Buffer.from([0x42, 0x69, 0x6e, 0x61, 0x72, 0x79]) // "Binary"
+		fs.touch(fileName, binaryData)
+		expect(fs.ls()).toContain(fileName)
+		const filePath = `${tempDir.name}/${fileName}`
+		expect(nodeFS.readFileSync(filePath)).toEqual(binaryData)
+	})
+
+	test('should create a new file with Arabic text (Buffer input) and verify content', () => {
+		const fileName = 'arabic-file.txt'
+		const arabicText = Buffer.from('السلام عليكم', 'utf-8')
+		fs.touch(fileName, arabicText)
+		expect(fs.ls()).toContain(fileName)
+		const filePath = `${tempDir.name}/${fileName}`
+		expect(nodeFS.readFileSync(filePath, 'utf-8')).toBe('السلام عليكم')
+	})
+
+	test('should create a new file with Arabic plain text and verify content', () => {
+		const fileName = 'arabic-plain.txt'
+		const content = 'السلام عليكم'
+		fs.touch(fileName, content)
+		expect(fs.ls()).toContain(fileName)
+		const filePath = `${tempDir.name}/${fileName}`
+		expect(nodeFS.readFileSync(filePath, 'utf-8')).toBe(content)
+	})
+
+	test('should throw an error if the file already exists (Buffer input)', () => {
+		const fileName = 'duplicate-file.txt'
+		const bufferData = Buffer.from('Duplicate test')
+		fs.touch(fileName, bufferData)
 		expect(() => {
-			fs.touch('existing-file.txt')
-			fs.touch('existing-file.txt')
-		}).toThrow("touch: cannot create file 'existing-file.txt': File exists")
+			fs.touch(fileName, bufferData)
+		}).toThrow(
+			"touch: cannot create file 'duplicate-file.txt': File exists",
+		)
 	})
 
-	test('should create an empty file when no content is provided', () => {
-		fs.touch('empty-file.txt')
-		expect(fs.ls()).toContain('empty-file.txt')
+	test('should create an empty file when no content is provided and verify it is empty', () => {
+		const fileName = 'empty-file.txt'
+		fs.touch(fileName)
+		expect(fs.ls()).toContain(fileName)
+		const filePath = `${tempDir.name}/${fileName}`
+		expect(nodeFS.readFileSync(filePath, 'utf-8')).toBe('')
 	})
 })
