@@ -6,43 +6,43 @@
 /*   License : MIT                                                            */
 /*                                                                            */
 /*   Created: 2025/01/11 11:43:23 by aallali                                  */
-/*   Updated: 2025/01/11 18:10:14 by aallali                                  */
+/*   Updated: 2025/01/13 18:17:18 by aallali                                  */
 /* ************************************************************************** */
 
 import { FileSystem } from './fileSystem'
-import logger from './logger'
+import { Logger } from './logger'
 
-const USERNAME = process.env.USER || ''
+const logger = new Logger('debug', 'test')
 
 const test = () => {
 	const fs = new FileSystem()
 
-	fs.cd('/')
-	fs.cd('../')
-	try {
-		// path doesn't exist
-		fs.cd('src/')
-	} catch {
-		/* empty */
-	}
-	fs.cd(`home/${USERNAME}/SySiFy`) // handles case-insensitive paths
-	logger.info(`List of files in the [${fs.pwd()}] directory:`, fs.ls())
-	fs.cd('src/')
+	const list = fs.ls()
 
-	try {
-		fs.mkdir('deleteMe')
-	} catch {
-		/* empty */
-	}
-	fs.touch('deleteMe/test.txt', '1337')
-	logger.info(`List of files in the [${fs.pwd()}] directory:`, fs.ls())
+	if (!list.includes('tmp/')) fs.mkdir('tmp')
 
-	// test all logger methods
-	logger.info('info message')
-	logger.warn('warn message')
-	logger.error('error message')
-	logger.debug('debug message')
-	logger.info('info message with args', { arg1: false }, 'arg2')
+	fs.cd('tmp')
+	fs.touch('test.txt', '1337')
+
+	logger.info(`List of files in the \n[${fs.pwd()}] directory:`, fs.ls())
+
+	// Save a file with a UTF-8 string
+	fs.touch('text-file.txt', 'This is a UTF-8 string.')
+
+	// Save a file with binary data (Buffer)
+	const binaryData = Buffer.from([0x42, 0x69, 0x6e, 0x61, 0x72, 0x79]) // Represents "Binary"
+	fs.touch('binary-file.bin', binaryData)
+
+	// Save a file with encoded text (e.g., Base64)
+	const base64Content = Buffer.from('Hello, world!').toString('base64')
+	const decodedBuffer = Buffer.from(base64Content, 'base64')
+	fs.touch('decoded-file.txt', decodedBuffer)
+
+	// Save multilingual content with UTF-8 encoding
+	fs.touch('multilingual.txt', 'السلام عليكم (Hello, World!)')
+
+	// cleanup the /tmp folder
+	fs.delete('../tmp', { recursive: true })
 }
 
 test()
