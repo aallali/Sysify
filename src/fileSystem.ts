@@ -1,18 +1,14 @@
-/* ************************************************************************** */
-/*   Copyright 2025 <Sysify>                                                  */
-/*                                                                            */
-/*   File    : fileSystem.ts                                                  */
-/*   Project : Sysify                                                         */
-/*   License : MIT                                                            */
-/*                                                                            */
-/*   Created: 2025/01/07 13:37:00 by aallali                                  */
-/*   Updated: 2025/01/13 22:31:17 by aallali                                  */
-/* ************************************************************************** */
-
-import fs from 'fs'
-import path from 'path'
+/*
+	Copyright 2025 Abdellah Allali
+*/
+import fs from 'node:fs'
+import path from 'node:path'
 import logger from './logger'
-import type { DeleteOptions, MkdirOptions } from './fileSystem.type'
+import type {
+	DeleteOptions,
+	MkdirOptions,
+	CopyOptions,
+} from './fileSystem.type'
 
 export class FileSystem {
 	private currentDir: string
@@ -38,9 +34,8 @@ export class FileSystem {
 				throw new Error(
 					`mkdir: cannot create directory '${dirName}': Directory exists`,
 				)
-			} else {
-				return
 			}
+			return
 		}
 
 		fs.mkdirSync(newDirPath)
@@ -135,7 +130,7 @@ export class FileSystem {
 			const entries = fs.readdirSync(dirToRead)
 			const listing = entries.map((entry) => {
 				const fullPath = path.join(dirToRead, entry)
-				return fs.statSync(fullPath).isDirectory() ? entry + '/' : entry
+				return fs.statSync(fullPath).isDirectory() ? `${entry}/` : entry
 			})
 
 			return listing
@@ -200,5 +195,78 @@ export class FileSystem {
 				throw new Error(errorMsg)
 			}
 		}
+	}
+
+	/**
+	 * Copies a file or directory from source to destination
+	 * @param source - The source file or directory path
+	 * @param destination - The destination path
+	 * @param options - Options for copy operation
+	 */
+	public copy(
+		source: string,
+		destination: string,
+		options: CopyOptions = {},
+	): void {
+		const sourcePath = path.resolve(this.currentDir, source)
+		const destPath = path.resolve(this.currentDir, destination)
+
+		// Check if source exists
+		if (!fs.existsSync(sourcePath)) {
+			throw new Error(
+				`copy: cannot copy '${source}': No such file or directory`,
+			)
+		}
+
+		// Check if destination already exists
+		if (fs.existsSync(destPath) && !options.overwrite) {
+			if (options.silent) return
+			throw new Error(`copy: '${destination}' already exists`)
+		}
+
+		const sourceStats = fs.statSync(sourcePath)
+
+		// Handle file copy
+		if (sourceStats.isFile()) {
+			try {
+				fs.copyFileSync(
+					sourcePath,
+					destPath,
+					options.overwrite ? undefined : fs.constants.COPYFILE_EXCL,
+				)
+				logger.debug(`File copied from ${sourcePath} to ${destPath}`)
+			} catch (error) {
+				if (!options.silent) {
+					throw error
+				}
+			}
+			return
+		}
+
+		// Handle directory copy
+		if (sourceStats.isDirectory()) {
+			if (!options.recursive) {
+				throw new Error(
+					`copy: omitting directory '${source}' (use recursive option to copy)`,
+				)
+			}
+
+			if (!fs.existsSync(destPath)) {
+				fs.mkdirSync(destPath, { recursive: true })
+			}
+
+			const files = fs.readdirSync(sourcePath)
+
+			for (const file of files) {
+				const srcFile = path.join(source, file)
+				const destFile = path.join(destination, file)
+				this.copy(srcFile, destFile, options)
+			}
+
+			logger.debug(`Directory copied from ${sourcePath} to ${destPath}`)
+			return
+		}
+
+		throw new Error(`copy: unsupported file type for '${source}'`)
 	}
 }
