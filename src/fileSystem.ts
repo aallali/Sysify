@@ -9,6 +9,7 @@ import type {
 	MkdirOptions,
 	CopyOptions,
 	MoveOptions,
+	ReadFileOptions,
 } from './fileSystem.type'
 
 export class FileSystem {
