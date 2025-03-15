@@ -18,3 +18,9 @@ export interface CopyOptions {
 	overwrite?: boolean
 	silent?: boolean
 }
+
+export interface MoveOptions {
+	force?: boolean
+	overwrite?: boolean
+	silent?: boolean
+}

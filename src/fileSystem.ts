@@ -8,6 +8,7 @@ import type {
 	DeleteOptions,
 	MkdirOptions,
 	CopyOptions,
+	MoveOptions,
 } from './fileSystem.type'
 
 export class FileSystem {
@@ -268,5 +269,59 @@ export class FileSystem {
 		}
 
 		throw new Error(`copy: unsupported file type for '${source}'`)
+	}
+
+	/**
+	 * Moves a file or directory from source to destination
+	 * @param source - The source file or directory path
+	 * @param destination - The destination path
+	 * @param options - Options for move operation
+	 */
+	public move(
+		source: string,
+		destination: string,
+		options: MoveOptions = {},
+	): void {
+		const sourcePath = path.resolve(this.currentDir, source)
+		const destPath = path.resolve(this.currentDir, destination)
+
+		// Check if source exists
+		if (!fs.existsSync(sourcePath)) {
+			throw new Error(
+				`move: cannot move '${source}': No such file or directory`,
+			)
+		}
+
+		// Check if destination already exists
+		if (fs.existsSync(destPath) && !options.overwrite) {
+			if (options.silent) return
+			throw new Error(`move: '${destination}' already exists`)
+		}
+
+		try {
+			fs.renameSync(sourcePath, destPath)
+			logger.debug(`Moved from ${sourcePath} to ${destPath}`)
+		} catch (error) {
+			// If rename fails (possibly due to different filesystems), try copy + delete
+			if (
+				error instanceof Error &&
+				'code' in error &&
+				error.code === 'EXDEV'
+			) {
+				this.copy(source, destination, {
+					recursive: true,
+					force: options.force,
+					overwrite: options.overwrite,
+					silent: options.silent,
+				})
+				this.delete(source, {
+					recursive: true,
+					force: options.force,
+					silent: options.silent,
+				})
+			} else if (!options.silent) {
+				throw error
+			}
+		}
 	}
 }
