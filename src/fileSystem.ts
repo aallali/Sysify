@@ -325,4 +325,87 @@ export class FileSystem {
 			}
 		}
 	}
+
+	/**
+	 * Renames a file or directory
+	 * @param oldPath - The current path
+	 * @param newPath - The new path
+	 */
+	public rename(oldPath: string, newPath: string): void {
+		const resolvedOldPath = path.resolve(this.currentDir, oldPath)
+		const resolvedNewPath = path.resolve(this.currentDir, newPath)
+
+		// Check if source exists
+		if (!fs.existsSync(resolvedOldPath)) {
+			throw new Error(
+				`rename: cannot rename '${oldPath}': No such file or directory`,
+			)
+		}
+
+		// Check if destination already exists
+		if (fs.existsSync(resolvedNewPath)) {
+			throw new Error(
+				`rename: cannot rename to '${newPath}': File exists`,
+			)
+		}
+
+		try {
+			fs.renameSync(resolvedOldPath, resolvedNewPath)
+			logger.debug(
+				`Renamed from ${resolvedOldPath} to ${resolvedNewPath}`,
+			)
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: 'Unknown error occurred'
+			throw new Error(
+				`rename: failed to rename '${oldPath}' to '${newPath}': ${errorMessage}`,
+			)
+		}
+	}
+
+	/**
+	 * Reads a file and returns its content
+	 * @param filePath - Path to the file
+	 * @param options - Options for reading the file
+	 * @returns The file content as string or Buffer
+	 */
+	public readFile(
+		filePath: string,
+		options?: ReadFileOptions,
+	): string | Buffer {
+		const resolvedPath = path.resolve(this.currentDir, filePath)
+
+		if (!fs.existsSync(resolvedPath)) {
+			throw new Error(
+				`readFile: cannot read '${filePath}': No such file or directory`,
+			)
+		}
+
+		const stats = fs.statSync(resolvedPath)
+		if (!stats.isFile()) {
+			throw new Error(
+				`readFile: cannot read '${filePath}': Is a directory`,
+			)
+		}
+
+		try {
+			if (options?.encoding) {
+				return fs.readFileSync(resolvedPath, {
+					encoding: options.encoding,
+					flag: options.flag,
+				})
+			}
+			return fs.readFileSync(resolvedPath)
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: 'Unknown error occurred'
+			throw new Error(
+				`readFile: failed to read '${filePath}': ${errorMessage}`,
+			)
+		}
+	}
 }
