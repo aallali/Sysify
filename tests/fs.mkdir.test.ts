@@ -1,3 +1,7 @@
+/*
+	Copyright 2025 Abdellah Allali
+*/
+
 import { FileSystem } from '../src/fileSystem'
 import { uuidv4 } from './helpers/generateRandomId'
 

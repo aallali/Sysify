@@ -1,3 +1,7 @@
+/*
+	Copyright 2025 Abdellah Allali
+*/
+
 import { FileSystem } from '../src/fileSystem'
 
 describe('FileSystem - PWD command', () => {
