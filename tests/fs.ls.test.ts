@@ -1,3 +1,7 @@
+/*
+	Copyright 2025 Abdellah Allali
+*/
+
 import { FileSystem } from '../src/fileSystem'
 
 describe('FileSystem - LS command', () => {
@@ -9,7 +13,7 @@ describe('FileSystem - LS command', () => {
 
 	test('should return list of files in the current directory', () => {
 		expect(fs.ls()).toEqual(
-			expect.arrayContaining(['src/', 'tests/', 'meta.json']),
+			expect.arrayContaining(['src/', 'tests/', 'package.json']),
 		)
 	})
 
