@@ -1,22 +1,9 @@
-/* ************************************************************************** */
-/*   Copyright 2025 <Sysify>                                                  */
-/*                                                                            */
-/*   File    : fs.delete.test.ts                                              */
-/*   Project : Sysify                                                         */
-/*   License : MIT                                                            */
-/*                                                                            */
-/*   Created: 2025/01/13 16:15:06 by aallali                                  */
-/*   Updated: 2025/01/13 22:34:43 by aallali                                  */
-/* ************************************************************************** */
+/*
+	Copyright 2025 Abdellah Allali
+*/
 
 import tmp from 'tmp'
 import { FileSystem } from '../src/fileSystem'
-
-export type DeleteOptions = {
-	recursive?: boolean
-	force?: boolean
-	silent?: boolean
-}
 
 describe('FileSystem - DELETE command', () => {
 	let fs: FileSystem
