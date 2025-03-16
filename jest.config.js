@@ -2,7 +2,6 @@ module.exports = {
 	preset: 'ts-jest',
 	testEnvironment: 'node',
 	rootDir: '.',
-	collectCoverage: true,
 	coverageDirectory: "coverage",  // Directory to save coverage reports
 	coverageReporters: ["json", "lcov", "text", "clover"],
 	collectCoverageFrom: [
