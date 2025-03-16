@@ -1,15 +1,8 @@
-/* ************************************************************************** */
-/*   Copyright 2025 <Sysify>                                                  */
-/*                                                                            */
-/*   File    : fs.touch.test.ts                                               */
-/*   Project : Sysify                                                         */
-/*   License : MIT                                                            */
-/*                                                                            */
-/*   Created: 2025/01/11 18:11:36 by aallali                                  */
-/*   Updated: 2025/01/13 15:32:26 by aallali                                  */
-/* ************************************************************************** */
+/*
+	Copyright 2025 Abdellah Allali
+*/
 
-import nodeFS from 'fs'
+import nodeFS from 'node:fs'
 import tmp from 'tmp'
 import { FileSystem } from '../src/fileSystem'
 
