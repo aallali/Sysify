@@ -1,3 +1,7 @@
+/*
+	Copyright 2025 Abdellah Allali
+*/
+
 import { FileSystem } from '../src/fileSystem'
 
 describe('FileSystem - CD command', () => {
@@ -9,7 +13,7 @@ describe('FileSystem - CD command', () => {
 
 	test('should cd a given directory', () => {
 		fs.cd('src/')
-		expect(fs.pwd()).toBe(process.cwd() + '/src')
+		expect(fs.pwd()).toBe(`${process.cwd()}/src`)
 	})
 
 	test('should throw error given invalid directory path', () => {
@@ -27,7 +31,7 @@ describe('FileSystem - CD command', () => {
 	})
 
 	test('should throw error given a file path', () => {
-		const filePath = 'meta.json'
+		const filePath = 'package.json'
 		expect(() => fs.cd(filePath)).toThrow(
 			`cd: not a directory: ${filePath}`,
 		)
@@ -35,7 +39,7 @@ describe('FileSystem - CD command', () => {
 
 	test('should "cd" to parent directory', () => {
 		fs.cd('src/')
-		expect(fs.pwd()).toBe(process.cwd() + '/src')
+		expect(fs.pwd()).toBe(`${process.cwd()}/src`)
 		fs.cd('../')
 		expect(fs.pwd()).toBe(process.cwd())
 	})
@@ -48,7 +52,7 @@ describe('FileSystem - CD command', () => {
 	test('should handle chained relative paths', () => {
 		fs.cd('src/')
 		fs.cd('./../src/')
-		expect(fs.pwd()).toBe(process.cwd() + '/src')
+		expect(fs.pwd()).toBe(`${process.cwd()}/src`)
 	})
 
 	test('should not navigate beyond root directory', () => {
@@ -59,16 +63,16 @@ describe('FileSystem - CD command', () => {
 
 	test('should normalize paths correctly', () => {
 		fs.cd('src/./../src/')
-		expect(fs.pwd()).toBe(process.cwd() + '/src')
+		expect(fs.pwd()).toBe(`${process.cwd()}/src`)
 	})
 
 	test('should allow case sensitivity of paths', () => {
 		const lowerCasePath = 'src/'
 		const upperCasePath = '../SRC/'
 		fs.cd(lowerCasePath)
-		expect(fs.pwd()).toBe(process.cwd() + '/src')
+		expect(fs.pwd()).toBe(`${process.cwd()}/src`)
 		fs.cd(upperCasePath)
-		expect(fs.pwd()).toBe(process.cwd() + '/src')
+		expect(fs.pwd()).toBe(`${process.cwd()}/src`)
 	})
 
 	test('should throw error for invalid characters in path', () => {
