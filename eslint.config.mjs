@@ -1,33 +1,19 @@
-import globals from 'globals'
-import pluginJs from '@eslint/js'
-import tsPlugin from '@typescript-eslint/eslint-plugin'
-import tsParser from '@typescript-eslint/parser'
-import prettierConfig from 'eslint-config-prettier'
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import prettierConfig from 'eslint-config-prettier';
 
 export default [
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  prettierConfig,
   {
     files: ['**/*.{js,mjs,cjs,ts}'],
-    ignores: ['dist/**', 'tests/**'],
-    languageOptions: {
-      parser: tsParser,
-      globals: {
-        ...globals.node,
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-    },
+    ignores: ['dist/**', 'node_modules/**'],
     rules: {
-      ...pluginJs.configs.recommended.rules,
-      ...tsPlugin.configs.recommended.rules,
-      ...prettierConfig.rules,
-      '@typescript-eslint/no-unused-vars': 'error',
+      'no-unused-vars': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/explicit-module-boundary-types': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
-  {
-    files: ['**/*.js'],
-    languageOptions: {
-      sourceType: 'commonjs',
-    },
-  },
-]
+];
