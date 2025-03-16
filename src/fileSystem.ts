@@ -3,7 +3,7 @@
 */
 import fs from 'node:fs'
 import path from 'node:path'
-import logger from './logger'
+import { Logger, type LogLevel } from './logger'
 import type {
 	DeleteOptions,
 	MkdirOptions,
@@ -14,10 +14,18 @@ import type {
 
 export class FileSystem {
 	private currentDir: string
+	private logger: Logger
 
 	constructor() {
+		const logLevel = (process.env.LOG_LEVEL as LogLevel) || 'warn'
 		this.currentDir = process.cwd() // Start in the Node.js process's working directory
-		logger.debug(`Current directory: ${this.pwd()}`)
+		this.logger = new Logger('sysify')
+		this.logger.setLevel(logLevel)
+		this.logger.debug(`Current directory: ${this.pwd()}`)
+	}
+
+	public getLogger(): Logger {
+		return this.logger
 	}
 
 	public pwd(): string {
@@ -32,7 +40,7 @@ export class FileSystem {
 
 		if (fs.existsSync(newDirPath)) {
 			if (!options.silent) {
-				logger.debug(`Directory already exists: ${newDirPath}`)
+				this.logger.debug(`Directory already exists: ${newDirPath}`)
 				throw new Error(
 					`mkdir: cannot create directory '${dirName}': Directory exists`,
 				)
@@ -41,7 +49,7 @@ export class FileSystem {
 		}
 
 		fs.mkdirSync(newDirPath)
-		logger.debug(`Directory created: ${newDirPath}`)
+		this.logger.debug(`Directory created: ${newDirPath}`)
 	}
 
 	public cd(dirName: string): void {
@@ -53,7 +61,7 @@ export class FileSystem {
 			}
 
 			this.currentDir = newDir
-			logger.debug(`Changed directory to: ${this.currentDir}`)
+			this.logger.debug(`Changed directory to: ${this.currentDir}`)
 		} catch (error: unknown) {
 			let errorMsg = `cd: no such file or directory: ${dirName}`
 
@@ -62,7 +70,7 @@ export class FileSystem {
 				errorMsg = `${error.message}`
 			}
 
-			logger.error(errorMsg)
+			this.logger.error(errorMsg)
 			throw new Error(errorMsg) // Re-throw the error with a custom message
 		}
 	}
@@ -108,7 +116,7 @@ export class FileSystem {
 			? content
 			: Buffer.from(content, 'utf-8')
 		fs.writeFileSync(newFilePath, bufferContent)
-		logger.info(`File created: ${newFilePath}`)
+		this.logger.info(`File created: ${newFilePath}`)
 	}
 
 	public ls(targetPath?: string): string[] {
@@ -120,7 +128,7 @@ export class FileSystem {
 			!fs.existsSync(dirToRead) ||
 			!fs.statSync(dirToRead).isDirectory()
 		) {
-			logger.error(
+			this.logger.error(
 				`Path '${dirToRead}' does not exist or is not a directory.`,
 			)
 			throw new Error(
@@ -137,7 +145,7 @@ export class FileSystem {
 
 			return listing
 		} catch (error) {
-			logger.error(`Failed to list files in: ${dirToRead}`)
+			this.logger.error(`Failed to list files in: ${dirToRead}`)
 			throw error
 		}
 	}
@@ -154,7 +162,7 @@ export class FileSystem {
 					)
 				}
 				if (!silent) {
-					logger.info(`delete: '${target}' does not exist`)
+					this.logger.info(`delete: '${target}' does not exist`)
 				}
 				return
 			}
@@ -180,7 +188,7 @@ export class FileSystem {
 			}
 
 			if (!silent) {
-				logger.info(`Deleted: ${targetPath}`)
+				this.logger.info(`Deleted: ${targetPath}`)
 			}
 		} catch (error: unknown) {
 			let errorMsg = `delete: error when delete: ${target} : ${JSON.stringify(error)}`
@@ -191,7 +199,7 @@ export class FileSystem {
 			}
 
 			if (!silent) {
-				logger.error(errorMsg)
+				this.logger.error(errorMsg)
 			}
 			if (!force) {
 				throw new Error(errorMsg)
@@ -236,7 +244,9 @@ export class FileSystem {
 					destPath,
 					options.overwrite ? undefined : fs.constants.COPYFILE_EXCL,
 				)
-				logger.debug(`File copied from ${sourcePath} to ${destPath}`)
+				this.logger.debug(
+					`File copied from ${sourcePath} to ${destPath}`,
+				)
 			} catch (error) {
 				if (!options.silent) {
 					throw error
@@ -265,7 +275,9 @@ export class FileSystem {
 				this.copy(srcFile, destFile, options)
 			}
 
-			logger.debug(`Directory copied from ${sourcePath} to ${destPath}`)
+			this.logger.debug(
+				`Directory copied from ${sourcePath} to ${destPath}`,
+			)
 			return
 		}
 
@@ -301,7 +313,7 @@ export class FileSystem {
 
 		try {
 			fs.renameSync(sourcePath, destPath)
-			logger.debug(`Moved from ${sourcePath} to ${destPath}`)
+			this.logger.debug(`Moved from ${sourcePath} to ${destPath}`)
 		} catch (error) {
 			// If rename fails (possibly due to different filesystems), try copy + delete
 			if (
@@ -351,7 +363,7 @@ export class FileSystem {
 
 		try {
 			fs.renameSync(resolvedOldPath, resolvedNewPath)
-			logger.debug(
+			this.logger.debug(
 				`Renamed from ${resolvedOldPath} to ${resolvedNewPath}`,
 			)
 		} catch (error) {
