@@ -78,6 +78,10 @@ fs.delete('projects')
 - **`ls()`**: List contents of the current directory.
 - **`touch(file: string, content?: string | Buffer)`**: Create a new file.
 - **`delete(target: string, options: { recursive?: boolean, silent: boolean, force?: boolean } = {})`**: Remove a file or directory.
+- **`copy(source: string, destination: string, options: { recursive?: boolean, force?: boolean, overwrite?: boolean, silent?: boolean } = {})`**: Copy files or directories.
+- **`move(source: string, destination: string, options: { force?: boolean, overwrite?: boolean, silent?: boolean } = {})`**: Move files or directories.
+- **`rename(oldPath: string, newPath: string)`**: Rename a file or directory.
+- **`readFile(filePath: string, options?: { encoding?: BufferEncoding, flag?: string })`**: Read file content as string or Buffer.
 
 ### Metadata
 - **`pwd()`**: Get the current working directory.
