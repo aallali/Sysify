@@ -371,12 +371,8 @@ export class FileSystem {
 				`Renamed from ${resolvedOldPath} to ${resolvedNewPath}`,
 			)
 		} catch (error) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: 'Unknown error occurred'
 			throw new Error(
-				`rename: failed to rename '${oldPath}' to '${newPath}': ${errorMessage}`,
+				`rename: failed to rename '${oldPath}' to '${newPath}': ${(error as Error).message}`,
 			)
 		}
 	}
