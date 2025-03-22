@@ -21,6 +21,7 @@ describe('FileSystem - DELETE command', () => {
 
 	test('should delete a file in the current directory', () => {
 		const fileName = 'file-to-delete.txt'
+
 		fs.touch(fileName, 'Temporary content')
 		expect(fs.ls()).toContain(fileName)
 
@@ -39,11 +40,13 @@ describe('FileSystem - DELETE command', () => {
 		expect(fs.ls()).toContain(`${dirName}/`)
 
 		fs.delete(dirName, { recursive: true })
+
 		expect(fs.ls()).not.toContain(`${dirName}/`)
 	})
 
 	test('should throw an error if attempting to delete a non-empty directory without recursive option', () => {
 		const dirName = 'non-empty-dir'
+
 		fs.mkdir(dirName)
 		fs.cd(dirName)
 		fs.touch('file.txt', 'Content')
@@ -64,7 +67,6 @@ describe('FileSystem - DELETE command', () => {
 		}).toThrow(
 			`delete: cannot delete '${nonExistentPath}': No such file or directory`,
 		)
-
 		expect(() => {
 			fs.delete(nonExistentPath, { force: true })
 		}).not.toThrow()
