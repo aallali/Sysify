@@ -4,6 +4,8 @@
 
 import tmp from 'tmp'
 import { FileSystem } from '../src/fileSystem'
+import nodeFS from 'node:fs'
+import path from 'node:path'
 
 describe('FileSystem - READFILE command', () => {
 	let fs: FileSystem
@@ -71,5 +73,16 @@ describe('FileSystem - READFILE command', () => {
 		expect(() => {
 			fs.readFile(dirName)
 		}).toThrow(/readFile: cannot read 'test-dir': Is a directory/)
+	})
+
+	test('should throw an error when path is a directory', () => {
+		const sourceFile = 'source.txt'
+		expect(() => {
+			fs.touch(sourceFile, '#######')
+			nodeFS.chmodSync(path.join(`${fs.pwd()}/`, sourceFile), 0o000)
+
+			fs.readFile(sourceFile)
+		}).toThrow(/EACCES: permission denied, open/)
+		nodeFS.chmodSync(path.join(`${fs.pwd()}/`, sourceFile), 0o644)
 	})
 })
