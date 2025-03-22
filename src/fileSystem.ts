@@ -402,22 +402,12 @@ export class FileSystem {
 			)
 		}
 
-		try {
-			if (options?.encoding) {
-				return fs.readFileSync(resolvedPath, {
-					encoding: options.encoding,
-					flag: options.flag,
-				})
-			}
-			return fs.readFileSync(resolvedPath)
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: 'Unknown error occurred'
-			throw new Error(
-				`readFile: failed to read '${filePath}': ${errorMessage}`,
-			)
+		if (options?.encoding) {
+			return fs.readFileSync(resolvedPath, {
+				encoding: options.encoding,
+				flag: options.flag,
+			})
 		}
+		return fs.readFileSync(resolvedPath)
 	}
 }
