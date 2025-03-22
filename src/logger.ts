@@ -33,30 +33,34 @@ export class Logger {
 	}
 
 	constructor(private readonly source: string) {
-		this.source = ` [${source}]`
+		this.source = `[${source}]`
 	}
 
 	public setLevel(level: LogLevel): void {
 		this.logLevel = level
 	}
 
-	public debug(message: string, ...args: unknown[]): void {
-		this.log('debug', message, ...args)
+	public getLevel(): LogLevel {
+		return this.logLevel
 	}
 
-	public info(message: string, ...args: unknown[]): void {
-		this.log('info', message, ...args)
+	public debug(...args: unknown[]): void {
+		this.log('debug', ...args)
 	}
 
-	public warn(message: string, ...args: unknown[]): void {
-		this.log('warn', message, ...args)
+	public info(...args: unknown[]): void {
+		this.log('info', ...args)
 	}
 
-	public error(message: string, ...args: unknown[]): void {
-		this.log('error', message, ...args)
+	public warn(...args: unknown[]): void {
+		this.log('warn', ...args)
 	}
 
-	private log(level: LogLevel, message: string, ...args: unknown[]): void {
+	public error(...args: unknown[]): void {
+		this.log('error', ...args)
+	}
+
+	private log(level: LogLevel, ...args: unknown[]): void {
 		if (!this.shouldLog(level)) return
 
 		const timestamp = this.formatTimestamp()
@@ -68,9 +72,10 @@ export class Logger {
 			| 'info'
 			| 'warn'
 			| 'error'
+
 		console[logMethod](
-			`${timestamp} ${coloredLevel}${coloredSource}: ${Logger.MESSAGE_COLORS[level]}${message}${Logger.RESET_COLOR}`,
-			...args,
+			`${timestamp}${coloredLevel}${coloredSource}:${Logger.MESSAGE_COLORS[level]}${args[0]}${Logger.RESET_COLOR}`,
+			...args.slice(1),
 		)
 	}
 
@@ -91,7 +96,7 @@ export class Logger {
 		const seconds = String(date.getSeconds()).padStart(2, '0')
 		const amOrPm = date.getHours() >= 12 ? 'PM' : 'AM'
 
-		return `${Logger.TIMESTAMP_COLOR}[ ${day}/${month}/${year} ${hours}:${minutes}:${seconds} ${amOrPm} ]${Logger.RESET_COLOR}`
+		return `${Logger.TIMESTAMP_COLOR}[${day}/${month}/${year} ${hours}:${minutes}:${seconds} ${amOrPm}]${Logger.RESET_COLOR}`
 	}
 	public testAllTypes(): void {
 		this.debug('Debug message')
