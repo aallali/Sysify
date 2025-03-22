@@ -10,7 +10,6 @@ export default [
     files: ['**/*.{js,mjs,cjs,ts}'],
     ignores: ['dist/**', 'node_modules/**'],
     rules: {
-      'no-unused-vars': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/no-non-null-assertion': 'off',
