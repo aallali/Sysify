@@ -88,7 +88,85 @@ describe('FileSystem - MOVE command', () => {
 		expect(fs.readFile(destPath, { encoding: 'utf-8' })).toBe(sourceContent)
 	})
 
+	test('should move by copy+delete the file if EXDEV error throwed', () => {
+		const sourceFile = 'source.txt'
+		const destFile = 'destination.txt'
+		const sourceContent = 'new content'
 		const destPath = path.join(tempDir.name, destFile)
-		expect(nodeFS.readFileSync(destPath, 'utf-8')).toBe(sourceContent)
+		const mockRename = jest
+			.spyOn(nodeFS, 'rename')
+			.mockImplementation((src, dest, cb) => {
+				const err = new Error('EXDEV error') as NodeJS.ErrnoException
+				err.code = 'EXDEV'
+				cb(err)
+			})
+
+		fs.touch(sourceFile, sourceContent)
+		fs.move(sourceFile, destFile)
+
+		expect(fs.ls()).not.toContain(sourceFile)
+		expect(fs.ls()).toContain(destFile)
+		expect(fs.readFile(destPath, { encoding: 'utf-8' })).toBe(sourceContent)
+
+		mockRename.mockRestore()
+	})
+
+	// Unfortunately, triggering a real EXDEV error is very system-specific
+	// and might not be reliably reproducible in all test environments.
+	// For this test, we'll have to use a mock for the specific EXDEV case.
+	test('should handle EXDEV errors by falling back to copy+delete', () => {
+		const sourceFile = path.join(tempDir.name, 'source.txt')
+		nodeFS.writeFileSync(sourceFile, 'test content')
+
+		const copySpy = jest.spyOn(fs, 'copy')
+		const deleteSpy = jest.spyOn(fs, 'delete')
+
+		// Create a mock implementation that throws EXDEV only for this specific test
+		const originalRenameSync = nodeFS.renameSync
+		nodeFS.renameSync = jest.fn(() => {
+			const error = new Error(
+				'Cross-device link',
+			) as NodeJS.ErrnoException
+			error.code = 'EXDEV'
+			throw error
+		})
+
+		try {
+			fs.move('source.txt', 'destination.txt')
+			expect(copySpy).toHaveBeenCalledWith(
+				'source.txt',
+				'destination.txt',
+				expect.objectContaining({ recursive: true }),
+			)
+			expect(deleteSpy).toHaveBeenCalledWith(
+				'source.txt',
+				expect.objectContaining({ recursive: true }),
+			)
+		} finally {
+			// Restore original fs.renameSync
+			nodeFS.renameSync = originalRenameSync
+		}
+	})
+
+	test('should not throw when move fails with silent option', () => {
+		fs.touch('source.txt', 'test content')
+
+		// Mock renameSync to throw a non-EXDEV error
+		const originalRenameSync = nodeFS.renameSync
+		nodeFS.renameSync = jest.fn(() => {
+			throw new Error('Permission denied')
+		})
+
+		// Should not throw with silent option
+		expect(() => {
+			fs.move('source.txt', 'destination.txt', { silent: true })
+		}).not.toThrow()
+
+		// Should throw without silent option
+		expect(() => {
+			fs.move('source.txt', 'destination.txt')
+		}).toThrow('Permission denied')
+
+		nodeFS.renameSync = originalRenameSync
 	})
 })
