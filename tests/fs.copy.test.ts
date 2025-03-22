@@ -92,6 +92,35 @@ describe('FileSystem - COPY command', () => {
 		)
 	})
 
+	test('should not throw an error if permission insuffisant to copy a file', () => {
+		const sourceFile = 'source.txt'
+		const destFile = 'destination.txt'
+		expect(() => {
+			fs.touch(sourceFile, '#######')
+			nodeFS.chmodSync(path.join(`${fs.pwd()}/`, sourceFile), 0o000)
+
+			fs.copy(sourceFile, destFile)
+		}).toThrow(/^EACCES: permission denied, copyfile/)
+		nodeFS.chmodSync(path.join(`${fs.pwd()}/`, sourceFile), 0o644)
+	})
+
+	test('should not throw an error when silent=true', () => {
+		const sourceFile = 'source.txt'
+		const destFile = 'destination.txt'
+		expect(() => {
+			fs.touch(sourceFile, '#######')
+			fs.touch(destFile, '#######')
+			fs.copy(sourceFile, destFile, { silent: true })
+		}).not.toThrow()
+	})
+
+	test('should not throw when copy unsupported type', () => {
+		const destFile = 'destination.txt'
+		expect(() => {
+			fs.copy('/dev/null', destFile)
+		}).toThrow(/^copy: unsupported file type for /)
+	})
+
 	test('should overwrite destination when overwrite option is true', () => {
 		const sourceFile = 'source.txt'
 		const destFile = 'destination.txt'
