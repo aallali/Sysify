@@ -73,4 +73,15 @@ describe('FileSystem - RENAME command', () => {
 			fs.rename(oldName, newName)
 		}).toThrow(/rename: cannot rename to 'existing-name.txt': File exists/)
 	})
+
+	test('should throw an error when destination is invalid', () => {
+		const oldName = 'old-name.txt'
+		const newName = 'invalid-folder/existing-name.txt'
+
+		fs.touch(oldName, 'content')
+
+		expect(() => {
+			fs.rename(oldName, newName)
+		}).toThrow(/ENOENT/)
+	})
 })
