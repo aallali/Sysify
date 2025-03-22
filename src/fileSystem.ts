@@ -128,12 +128,9 @@ export class FileSystem {
 			!fs.existsSync(dirToRead) ||
 			!fs.statSync(dirToRead).isDirectory()
 		) {
-			this.logger.error(
-				`Path '${dirToRead}' does not exist or is not a directory.`,
-			)
-			throw new Error(
-				`Path '${dirToRead}' does not exist or is not a directory.`,
-			)
+			const errorMsg = `Path '${dirToRead}' does not exist or is not a directory.`
+			this.logger.error(errorMsg)
+			throw new Error(errorMsg)
 		}
 
 		try {
@@ -144,8 +141,10 @@ export class FileSystem {
 			})
 
 			return listing
-		} catch (error) {
-			this.logger.error(`Failed to list files in: ${dirToRead}`)
+		} catch (error: unknown) {
+			this.logger.error(
+				`Failed to list files in: ${dirToRead} - ${(error as Error).message}`,
+			)
 			throw error
 		}
 	}
