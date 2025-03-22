@@ -249,6 +249,9 @@ export class FileSystem {
 					`File copied from ${sourcePath} to ${destPath}`,
 				)
 			} catch (error) {
+				this.logger.error(
+					`copy: failed to copy '${source}' to '${destination}' | Reason: ${(error as Error).message}`,
+				)
 				if (!options.silent) {
 					throw error
 				}
