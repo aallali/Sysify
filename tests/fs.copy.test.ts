@@ -25,15 +25,14 @@ describe('FileSystem - COPY command', () => {
 		const sourceFile = 'source.txt'
 		const content = 'Test content'
 		const destFile = 'destination.txt'
+		const destPath = path.join(tempDir.name, destFile)
 
 		fs.touch(sourceFile, content)
 		fs.copy(sourceFile, destFile)
 
 		expect(fs.ls()).toContain(sourceFile)
 		expect(fs.ls()).toContain(destFile)
-
-		const destPath = path.join(tempDir.name, destFile)
-		expect(nodeFS.readFileSync(destPath, 'utf-8')).toBe(content)
+		expect(fs.readFile(destPath, { encoding: 'utf-8' })).toBe(content)
 	})
 
 	test('should throw an error when source does not exist', () => {
@@ -97,13 +96,12 @@ describe('FileSystem - COPY command', () => {
 		const sourceFile = 'source.txt'
 		const destFile = 'destination.txt'
 		const sourceContent = 'new content'
+		const destPath = path.join(tempDir.name, destFile)
 
 		fs.touch(sourceFile, sourceContent)
 		fs.touch(destFile, 'old content')
-
 		fs.copy(sourceFile, destFile, { overwrite: true })
 
-		const destPath = path.join(tempDir.name, destFile)
-		expect(nodeFS.readFileSync(destPath, 'utf-8')).toBe(sourceContent)
+		expect(fs.readFile(destPath, { encoding: 'utf-8' })).toBe(sourceContent)
 	})
 })
