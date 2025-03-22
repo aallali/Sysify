@@ -12,7 +12,6 @@ describe('FileSystem - MKDIR command', () => {
 	beforeEach(() => {
 		tempDir = `tmp-${uuidv4()}`
 		fs = new FileSystem()
-
 		fs.mkdir(tempDir, { silent: true })
 		fs.cd(tempDir)
 	})
@@ -34,12 +33,11 @@ describe('FileSystem - MKDIR command', () => {
 	})
 
 	test('should throw an error if the directory already exists', () => {
-		fs.mkdir('existing-dir')
+		const src = 'existing-dir'
+		fs.mkdir(src)
 		expect(() => {
-			fs.mkdir('existing-dir')
-		}).toThrow(
-			"mkdir: cannot create directory 'existing-dir': Directory exists",
-		)
+			fs.mkdir(src)
+		}).toThrow(`mkdir: cannot create directory '${src}': Directory exists`)
 	})
 
 	test('should not throw an error if the directory already exists and options.silent=true', () => {
