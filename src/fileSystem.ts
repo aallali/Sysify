@@ -24,14 +24,42 @@ export class FileSystem {
 		this.logger.debug(`Current directory: ${this.pwd()}`)
 	}
 
+	/**
+	 * Returns the logger instance
+	 * @returns {Logger} The logger instance for this FileSystem
+	 * @example
+	 * const fs = new FileSystem();
+	 * const logger = fs.getLogger();
+	 * logger.info('Custom message');
+	 */
 	public getLogger(): Logger {
 		return this.logger
 	}
 
+	/**
+	 * Returns the current working directory path
+	 * @returns {string} The absolute path of the current directory
+	 * @example
+	 * const fs = new FileSystem();
+	 * console.log(fs.pwd()); // e.g. '/home/user/projects'
+	 */
 	public pwd(): string {
 		return this.currentDir
 	}
 
+	/**
+	 * Creates a new directory
+	 * @param {string} dirName - Path of the directory to create (absolute or relative)
+	 * @param {MkdirOptions} [options={}] - Directory creation options
+	 * @param {boolean} [options.silent=false] - When true, suppresses errors if directory exists
+	 * @throws {Error} If directory already exists or cannot be created
+	 * @example
+	 * // Create a directory
+	 * fs.mkdir('new-directory');
+	 *
+	 * // Create silently (no error if exists)
+	 * fs.mkdir('existing-directory', { silent: true });
+	 */
 	public mkdir(dirName: string, options: MkdirOptions = {}): void {
 		if (!dirName) {
 			throw new Error('mkdir: missing operand')
@@ -52,6 +80,20 @@ export class FileSystem {
 		this.logger.debug(`Directory created: ${newDirPath}`)
 	}
 
+	/**
+	 * Changes the current working directory
+	 * @param {string} dirName - Directory path to navigate to (absolute or relative)
+	 * @throws {Error} If directory doesn't exist or is not a directory
+	 * @example
+	 * // Change to subdirectory
+	 * fs.cd('projects');
+	 *
+	 * // Change to parent directory
+	 * fs.cd('..');
+	 *
+	 * // Change to absolute path
+	 * fs.cd('/home/user/documents');
+	 */
 	public cd(dirName: string): void {
 		try {
 			const newDir = this.resolveCaseInsensitivePath(dirName)
@@ -103,6 +145,21 @@ export class FileSystem {
 		return path.join(parentDir, match)
 	}
 
+	/**
+	 * Creates an empty file or writes content to a new file
+	 * @param {string} fileName - Name of the file to create
+	 * @param {string|Buffer} [content=''] - Optional content to write to the file
+	 * @throws {Error} If file already exists
+	 * @example
+	 * // Create empty file
+	 * fs.touch('newfile.txt');
+	 *
+	 * // Create file with content
+	 * fs.touch('config.json', '{"setting": "value"}');
+	 *
+	 * // Create file with binary content
+	 * fs.touch('data.bin', Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]));
+	 */
 	public touch(fileName: string, content: string | Buffer = ''): void {
 		const newFilePath = path.join(this.currentDir, fileName)
 
@@ -119,6 +176,20 @@ export class FileSystem {
 		this.logger.info(`File created: ${newFilePath}`)
 	}
 
+	/**
+	 * Lists files and directories in the specified path
+	 * @param {string} [targetPath] - Path to list contents of (defaults to current directory)
+	 * @returns {string[]} Array of file and directory names (directories end with '/')
+	 * @throws {Error} If path doesn't exist or is not a directory
+	 * @example
+	 * // List current directory
+	 * const files = fs.ls();
+	 * console.log(files); // ['file.txt', 'images/', 'docs/']
+	 *
+	 * // List specific directory
+	 * const subFiles = fs.ls('images');
+	 * console.log(subFiles); // ['photo.jpg', 'avatar.png']
+	 */
 	public ls(targetPath?: string): string[] {
 		const dirToRead = targetPath
 			? path.resolve(this.currentDir, targetPath)
@@ -149,6 +220,24 @@ export class FileSystem {
 		}
 	}
 
+	/**
+	 * Deletes files or directories
+	 * @param {string} target - Path to file or directory to delete
+	 * @param {DeleteOptions} [options={}] - Delete operation options
+	 * @param {boolean} [options.recursive=false] - When true, recursively deletes directories and their contents
+	 * @param {boolean} [options.force=false] - When true, ignores non-existent files and suppresses most errors
+	 * @param {boolean} [options.silent=false] - When true, suppresses log messages
+	 * @throws {Error} If target doesn't exist or is a directory without recursive option
+	 * @example
+	 * // Delete a file
+	 * fs.delete('file.txt');
+	 *
+	 * // Delete a directory recursively
+	 * fs.delete('old-project', { recursive: true });
+	 *
+	 * // Force delete without errors
+	 * fs.delete('maybe-exists.tmp', { force: true });
+	 */
 	public delete(target: string, options: DeleteOptions = {}): void {
 		const { recursive = false, force = false, silent = false } = options
 		const targetPath = path.resolve(this.currentDir, target)
@@ -210,9 +299,22 @@ export class FileSystem {
 
 	/**
 	 * Copies a file or directory from source to destination
-	 * @param source - The source file or directory path
-	 * @param destination - The destination path
-	 * @param options - Options for copy operation
+	 * @param {string} source - Path to the source file or directory
+	 * @param {string} destination - Path to the destination
+	 * @param {CopyOptions} [options={}] - Copy operation options
+	 * @param {boolean} [options.recursive=false] - When true, recursively copies directories
+	 * @param {boolean} [options.overwrite=false] - When true, overwrites existing files/directories
+	 * @param {boolean} [options.silent=false] - When true, suppresses errors
+	 * @throws {Error} If source doesn't exist, destination exists (without overwrite), or copying directory without recursive
+	 * @example
+	 * // Copy a file
+	 * fs.copy('source.txt', 'destination.txt');
+	 *
+	 * // Copy and overwrite if exists
+	 * fs.copy('config.json', 'config.backup.json', { overwrite: true });
+	 *
+	 * // Copy directory recursively
+	 * fs.copy('project', 'project-backup', { recursive: true });
 	 */
 	public copy(
 		source: string,
@@ -222,14 +324,12 @@ export class FileSystem {
 		const sourcePath = path.resolve(this.currentDir, source)
 		const destPath = path.resolve(this.currentDir, destination)
 
-		// Check if source exists
 		if (!fs.existsSync(sourcePath)) {
 			throw new Error(
 				`copy: cannot copy '${source}': No such file or directory`,
 			)
 		}
 
-		// Check if destination already exists
 		if (fs.existsSync(destPath) && !options.overwrite) {
 			if (options.silent) return
 			throw new Error(`copy: '${destination}' already exists`)
@@ -237,7 +337,6 @@ export class FileSystem {
 
 		const sourceStats = fs.statSync(sourcePath)
 
-		// Handle file copy
 		if (sourceStats.isFile()) {
 			try {
 				fs.copyFileSync(
@@ -259,7 +358,6 @@ export class FileSystem {
 			return
 		}
 
-		// Handle directory copy
 		if (sourceStats.isDirectory()) {
 			if (!options.recursive) {
 				throw new Error(
@@ -290,9 +388,22 @@ export class FileSystem {
 
 	/**
 	 * Moves a file or directory from source to destination
-	 * @param source - The source file or directory path
-	 * @param destination - The destination path
-	 * @param options - Options for move operation
+	 * @param {string} source - Path to the source file or directory
+	 * @param {string} destination - Path to the destination
+	 * @param {MoveOptions} [options={}] - Move operation options
+	 * @param {boolean} [options.overwrite=false] - When true, overwrites existing files/directories
+	 * @param {boolean} [options.force=false] - When true, ignores errors
+	 * @param {boolean} [options.silent=false] - When true, suppresses errors and logging
+	 * @throws {Error} If source doesn't exist or destination exists without overwrite
+	 * @example
+	 * // Move a file
+	 * fs.move('old-location.txt', 'new-location.txt');
+	 *
+	 * // Move and overwrite if destination exists
+	 * fs.move('current.log', 'archive.log', { overwrite: true });
+	 *
+	 * // Move directory across filesystems (uses copy + delete)
+	 * fs.move('/tmp/data', '/home/user/data');
 	 */
 	public move(
 		source: string,
@@ -344,8 +455,15 @@ export class FileSystem {
 
 	/**
 	 * Renames a file or directory
-	 * @param oldPath - The current path
-	 * @param newPath - The new path
+	 * @param {string} oldPath - Current path of the file or directory
+	 * @param {string} newPath - New path for the file or directory
+	 * @throws {Error} If source doesn't exist or destination already exists
+	 * @example
+	 * // Rename a file
+	 * fs.rename('oldname.txt', 'newname.txt');
+	 *
+	 * // Rename a directory
+	 * fs.rename('old-directory', 'new-directory');
 	 */
 	public rename(oldPath: string, newPath: string): void {
 		const resolvedOldPath = path.resolve(this.currentDir, oldPath)
@@ -379,9 +497,24 @@ export class FileSystem {
 
 	/**
 	 * Reads a file and returns its content
-	 * @param filePath - Path to the file
-	 * @param options - Options for reading the file
-	 * @returns The file content as string or Buffer
+	 * @param {string} filePath - Path to the file to read
+	 * @param {ReadFileOptions} [options] - Read operation options
+	 * @param {BufferEncoding} [options.encoding] - Character encoding for the file
+	 * @param {string} [options.flag] - File system flag (e.g., 'r' for read)
+	 * @returns {string|Buffer} File contents as string (if encoding specified) or Buffer
+	 * @throws {Error} If file doesn't exist or is a directory
+	 * @example
+	 * // Read as buffer
+	 * const binData = fs.readFile('data.bin');
+	 *
+	 * // Read as UTF-8 string
+	 * const textContent = fs.readFile('config.json', { encoding: 'utf8' });
+	 *
+	 * // Read with specific flag
+	 * const content = fs.readFile('important.txt', {
+	 *   encoding: 'utf8', // 'utf16le' | 'latin1' | 'base64' | 'hex' | 'ascii' | 'binary' | 'ucs2'
+	 *   flag: 'r' // 'r+' | 'rs' | 'rs+' | 'w' | 'wx' | 'w+' | 'wx+'
+	 * });
 	 */
 	public readFile(
 		filePath: string,
