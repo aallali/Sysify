@@ -25,15 +25,14 @@ describe('FileSystem - MOVE command', () => {
 		const sourceFile = 'source.txt'
 		const content = 'Test content'
 		const destFile = 'destination.txt'
+		const destPath = path.join(tempDir.name, destFile)
 
 		fs.touch(sourceFile, content)
 		fs.move(sourceFile, destFile)
 
 		expect(fs.ls()).not.toContain(sourceFile)
 		expect(fs.ls()).toContain(destFile)
-
-		const destPath = path.join(tempDir.name, destFile)
-		expect(nodeFS.readFileSync(destPath, 'utf-8')).toBe(content)
+		expect(fs.readFile(destPath, { encoding: 'utf-8' })).toBe(content)
 	})
 
 	test('should throw an error when source does not exist', () => {
@@ -54,15 +53,17 @@ describe('FileSystem - MOVE command', () => {
 		expect(() => {
 			fs.move(sourceFile, destFile)
 		}).toThrow(/move: 'destination.txt' already exists/)
+
+		expect(() => {
+			fs.move(sourceFile, destFile, { silent: true })
+		}).not.toThrow()
 	})
 
 	test('should move a directory and its contents', () => {
-		// Create source directory structure
 		fs.mkdir('source-dir')
 		fs.cd('source-dir')
 		fs.touch('file1.txt', 'content 1')
 		fs.cd('..')
-
 		fs.move('source-dir', 'dest-dir')
 
 		expect(fs.ls()).not.toContain('source-dir/')
@@ -76,14 +77,16 @@ describe('FileSystem - MOVE command', () => {
 		const sourceFile = 'source.txt'
 		const destFile = 'destination.txt'
 		const sourceContent = 'new content'
+		const destPath = path.join(tempDir.name, destFile)
 
 		fs.touch(sourceFile, sourceContent)
 		fs.touch(destFile, 'old content')
-
 		fs.move(sourceFile, destFile, { overwrite: true })
 
 		expect(fs.ls()).not.toContain(sourceFile)
 		expect(fs.ls()).toContain(destFile)
+		expect(fs.readFile(destPath, { encoding: 'utf-8' })).toBe(sourceContent)
+	})
 
 		const destPath = path.join(tempDir.name, destFile)
 		expect(nodeFS.readFileSync(destPath, 'utf-8')).toBe(sourceContent)
