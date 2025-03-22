@@ -190,11 +190,13 @@ export class FileSystem {
 				this.logger.info(`Deleted: ${targetPath}`)
 			}
 		} catch (error: unknown) {
-			let errorMsg = `delete: error when delete: ${target} : ${JSON.stringify(error)}`
+			let errorMsg: string
 
 			// Handle error based on its type
 			if (error instanceof Error) {
 				errorMsg = `${error.message}`
+			} else {
+				errorMsg = `delete: error when delete: ${target} : ${JSON.stringify(error)}`
 			}
 
 			if (!silent) {
