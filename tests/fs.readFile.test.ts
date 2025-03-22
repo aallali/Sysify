@@ -49,13 +49,11 @@ describe('FileSystem - READFILE command', () => {
 		fs.touch(fileName, content)
 
 		const utf8Result = fs.readFile(fileName, { encoding: 'utf8' })
-		expect(utf8Result).toBe(content)
-
 		const base64Result = fs.readFile(fileName, { encoding: 'base64' })
+		const base64Buffer = Buffer.from(base64Result as string, 'base64')
+		expect(utf8Result).toBe(content)
 		expect(typeof base64Result).toBe('string')
-		expect(
-			Buffer.from(base64Result as string, 'base64').toString('utf8'),
-		).toBe(content)
+		expect(base64Buffer.toString('utf8')).toBe(content)
 	})
 
 	test('should throw an error when file does not exist', () => {
@@ -68,6 +66,7 @@ describe('FileSystem - READFILE command', () => {
 
 	test('should throw an error when path is a directory', () => {
 		const dirName = 'test-dir'
+
 		fs.mkdir(dirName)
 
 		expect(() => {
