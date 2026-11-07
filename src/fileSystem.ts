@@ -96,7 +96,7 @@ export class FileSystem {
 			})
 		}
 
-		const newDirPath = path.join(this.currentDir, dirName)
+		const newDirPath = path.resolve(this.currentDir, dirName)
 
 		try {
 			if (fs.existsSync(newDirPath)) {
@@ -213,7 +213,7 @@ export class FileSystem {
 		options: { silent?: boolean; force?: boolean } = {},
 	): void {
 		const { silent, force } = this.getErrorOptions(options)
-		const newFilePath = path.join(this.currentDir, fileName)
+		const newFilePath = path.resolve(this.currentDir, fileName)
 
 		try {
 			if (fs.existsSync(newFilePath)) {

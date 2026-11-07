@@ -4,6 +4,8 @@
 
 import { FileSystem } from '../src/fileSystem'
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 
 describe('FileSystem - MKDIR command', () => {
 	let fs: FileSystem
@@ -53,4 +55,11 @@ describe('FileSystem - MKDIR command', () => {
 		expect(fs.ls()).toEqual(expect.arrayContaining(['dir1/', 'dir2/']))
 	})
 
+	test('should treat an absolute path as absolute', () => {
+		const absDir = path.join(fs.pwd(), 'abs-dir')
+		fs.cd('..')
+		fs.mkdir(absDir)
+		expect(existsSync(absDir)).toBe(true)
+		fs.cd(tempDir)
+	})
 })
