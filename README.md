@@ -19,77 +19,114 @@ With `Sysify`, you can leverage commands like `mkdir`, `cd`, `ls`, `touch`, `rm`
 
 ## ✨ Features
 
-- **📂 Essential Terminal Commands**: Execute familiar file system operations programmatically (“e.g., mkdir, ls, rm”).
-- **📚 Typed and Extensible API**: Built with TypeScript for type safety and scalability.
-- **🔧 Script-Friendly**: Simplify writing automation scripts and utilities.
-- **📝 Metadata Tracking**: Access file and directory metadata like size and permissions.
-- **💰 Lightweight and Fast**: Optimized for minimal overhead while retaining robust functionality.
+- **📂 Terminal-like commands**: `mkdir`, `cd`, `ls`, `touch`, `delete`, `copy`, `move`, `rename`, `readFile`, `writeFile`, `exists`, `stat`.
+- **📍 Own working directory**: `cd` changes the instance's directory, never `process.cwd()`.
+- **🛡️ Predictable errors**: every failure is a `FileSystemError` with an errno-style `code` (`ENOENT`, `EEXIST`, ...).
+- **🔇 `silent` / `force` everywhere**: choose per call (or globally) whether errors are logged and whether they throw.
+- **📚 Fully typed**: TypeScript types and JSDoc for every method; works from ESM and CommonJS.
+- **🪶 Zero dependencies.**
 
 ---
 
 ## 📥 Installation
 
-Install `sysify` via _`pnpm`_:
+Requires Node.js 20 or later.
 
 ```bash
-pnpm install sysify
+npm install sysify
+# or
+pnpm add sysify
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-Here’s a quick example of how to get started with `Sysify`:
-
 ```typescript
-import { FileSystem } from 'sysify';
+import { FileSystem } from 'sysify' // or: const { FileSystem } = require('sysify')
 
-const fs = new FileSystem();
+const fs = new FileSystem()
 
-// Create a new directory
-fs.mkdir('projects');
+fs.mkdir('projects/demo', { recursive: true }) // mkdir -p
+fs.cd('projects/demo')
 
-// Navigate into the directory
-fs.cd('projects');
+fs.touch('readme.txt', 'Welcome to Sysify!') // fails if the file exists
+fs.writeFile('log.txt', 'line 1\n') // create or overwrite
+fs.writeFile('log.txt', 'line 2\n', { append: true })
 
-// Create a new file with content
-fs.touch('readme.txt', 'Welcome to Sysify!');
+console.log(fs.ls()) // ['log.txt', 'readme.txt']
+console.log(fs.readFile('log.txt', { encoding: 'utf8' })) // string
+console.log(fs.readFile('readme.txt')) // Buffer
 
-// List contents of the current directory
-console.log(fs.ls()); // Output: ['readme.txt']
-
-// Delete the file
-fs.delete('readme.txt');
-
-// Go back to the root directory
-fs.cd('..');
-
-// Delete "projects" folder (a.k.a 'rm -rf projects/')
-fs.delete('projects')
+fs.cd('../..')
+fs.delete('projects', { recursive: true }) // rm -r
 ```
 
 ---
 
-## 🔧 Supported Commands
+## 🔧 API
 
-### File and Directory Management
-- **`mkdir(directory: string, options: { silent: boolean } = {})`**: Create a new directory.
-- **`cd(directory: string)`**: Change the current working directory.
-- **`ls()`**: List contents of the current directory.
-- **`touch(file: string, content?: string | Buffer)`**: Create a new file.
-- **`delete(target: string, options: { recursive?: boolean, silent: boolean, force?: boolean } = {})`**: Remove a file or directory.
-- **`copy(source: string, destination: string, options: { recursive?: boolean, force?: boolean, overwrite?: boolean, silent?: boolean } = {})`**: Copy files or directories.
-- **`move(source: string, destination: string, options: { force?: boolean, overwrite?: boolean, silent?: boolean } = {})`**: Move files or directories.
-- **`rename(oldPath: string, newPath: string)`**: Rename a file or directory.
-- **`readFile(filePath: string, options?: { encoding?: BufferEncoding, flag?: string })`**: Read file content as string or Buffer.
+Paths can be absolute or relative to `pwd()`. Every command also accepts `silent` and `force` (see [Error handling](#-error-handling)).
 
-### Metadata
-- **`pwd()`**: Get the current working directory.
+| Method | Description | Extra options |
+| --- | --- | --- |
+| `pwd()` | Current working directory (starts at `process.cwd()`) | |
+| `cd(dir)` | Change directory (falls back to a case-insensitive match) | |
+| `ls(dir?)` | List entries; directories end with `/` | |
+| `exists(path)` | `true` if the path exists, never throws | |
+| `stat(path)` | `fs.Stats` (size, mode, dates, `isFile()`, ...) | |
+| `mkdir(dir, opts?)` | Create a directory | `recursive` |
+| `touch(file, content?)` | Create a **new** file (string or `Buffer`) | |
+| `writeFile(file, data, opts?)` | Create or overwrite a file | `append`, `encoding` |
+| `readFile(file, opts?)` | `string` with `encoding`, otherwise `Buffer` | `encoding`, `flag` |
+| `copy(src, dest, opts?)` | Copy a file or directory | `recursive`, `overwrite` |
+| `move(src, dest, opts?)` | Move (copy + delete across devices) | `overwrite` |
+| `rename(old, new)` | Rename; never replaces an existing path | |
+| `delete(path, opts?)` | Delete a file or directory | `recursive` |
+| `getLogger()` | Access the instance's logger | |
 
 ---
 
-## ⚡ Why Sysify?
+## 🛡️ Error handling
 
-- **Ease of Use**: Intuitive API that mirrors terminal commands.
-- **Type Safety**: Reduce errors and improve code clarity with TypeScript.
-- **Customization**: Easily extend functionality to meet your specific needs.
+Failures throw a `FileSystemError`:
+
+```typescript
+import { FileSystem, FileSystemError } from 'sysify'
+
+try {
+  fs.readFile('missing.txt')
+} catch (err) {
+  if (err instanceof FileSystemError && err.code === 'ENOENT') {
+    // err.message   -> "readFile: cannot read 'missing.txt': No such file or directory"
+    // err.operation -> 'readFile'
+    // err.path      -> 'missing.txt'
+    // err.originalError -> the underlying Node error, when there is one
+  }
+}
+```
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `silent` | `false` | Don't log the error |
+| `force` | `false` | Don't throw; return a fallback (`[]` for `ls`, `undefined` for `stat`, empty `string`/`Buffer` for `readFile`) |
+
+Set them per call, or as defaults for the whole instance:
+
+```typescript
+const fs = new FileSystem({ silent: true, force: true, logLevel: 'error' })
+fs.ls('maybe-missing') // [] instead of throwing
+fs.ls('must-exist', { force: false }) // per-call options win
+```
+
+---
+
+## 📝 Logging
+
+Log level comes from the `logLevel` constructor option, then the `LOG_LEVEL` environment variable, then defaults to `'warn'`. Levels are `debug`, `info`, `warn`, `error` and `off`. Colors are turned off when output isn't a terminal or when [`NO_COLOR`](https://no-color.org) is set.
+
+---
+
+## 📜 License
+
+[MIT](./LICENCE) © Abdellah Allali
