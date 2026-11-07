@@ -3,14 +3,14 @@
 */
 
 import { FileSystem } from '../src/fileSystem'
-import { uuidv4 } from './helpers/generateRandomId'
+import { randomUUID } from 'node:crypto'
 
 describe('FileSystem - MKDIR command', () => {
 	let fs: FileSystem
 	let tempDir: string
 
 	beforeEach(() => {
-		tempDir = `tmp-${uuidv4()}`
+		tempDir = `tmp-${randomUUID()}`
 		fs = new FileSystem()
 		fs.mkdir(tempDir, { silent: true })
 		fs.cd(tempDir)
