@@ -8,7 +8,7 @@
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"types": ["node", "jest"],
-		"sourceMap": true
+		"sourceMap": false
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "src/test.ts", "tests", "examples/"]

@@ -2,14 +2,23 @@
 	"name": "sysify",
 	"version": "0.1.0-beta.2",
 	"description": "A Lightweight, TypeScript-Powered File System for Node.js",
+	"type": "commonjs",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"sideEffects": false,
 	"files": [
 		"dist/",
 		"README.md"
 	],
 	"scripts": {
-		"build": "tsc",
+		"build": "rm -rf dist && tsc",
 		"dev": "LOG_LEVEL=debug node --watch -r ts-node/register/transpile-only src/test.ts",
 		"lint": "eslint src/ tests/ --max-warnings=5",
 		"lint:fix": "eslint src/ tests/ --fix",
@@ -19,15 +28,10 @@
 		"test": "LOG_LEVEL=off jest",
 		"test:coverage": "LOG_LEVEL=off jest --coverage",
 		"test:watch": "LOG_LEVEL=off jest --watch",
-		"clean": "rm -rf dist",
 		"type-check": "tsc --noEmit",
-		"prepare": "npm run build",
 		"prepublishOnly": "npm run validate && npm test",
-		"publish:npm": "npm publish",
 		"publish:beta": "npm version prerelease --preid=beta && npm publish --tag beta",
-		"unpublish:npm": "npm unpublish",
-		"version": "npm run build",
-		"postpublish": "echo 'Successfully published to npm!'"
+		"prepack": "npm run build"
 	},
 	"keywords": [
 		"sysify",
@@ -51,7 +55,7 @@
 	"author": "Abdellah Allali <hi+sysify@allali.me>",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/aallali/Sysify"
+		"url": "git+https://github.com/aallali/Sysify.git"
 	},
 	"bugs": {
 		"url": "https://github.com/aallali/Sysify/issues"
