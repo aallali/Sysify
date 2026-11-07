@@ -70,10 +70,7 @@ export class Logger {
 		const coloredSource = `${Logger.SOURCE_COLOR}${this.source}${Logger.RESET_COLOR}`
 
 		const logMethod = (level === 'debug' ? 'log' : level) as
-			| 'log'
-			| 'info'
-			| 'warn'
-			| 'error'
+			'log' | 'info' | 'warn' | 'error'
 
 		const line = `${timestamp}${coloredLevel}${coloredSource}:${Logger.MESSAGE_COLORS[level]}${args[0]}${Logger.RESET_COLOR}`
 		// No ANSI codes when piped to a file/CI or when NO_COLOR is set (https://no-color.org)
