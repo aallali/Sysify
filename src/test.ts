@@ -10,10 +10,9 @@ logger.setLevel('debug')
 logger.testAllTypes()
 
 const test = () => {
-	const fs = new FileSystem({ force: false, silent: true})
+	const fs = new FileSystem({ force: false, silent: true })
 	fs.getLogger().setLevel('error')
 
-	fs.mkdir('/dir1/dir2/dir3/dir4')
 	const list = fs.ls()
 
 	// Create a test directory if it doesn't exist
