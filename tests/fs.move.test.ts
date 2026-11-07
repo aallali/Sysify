@@ -169,4 +169,28 @@ describe('FileSystem - MOVE command', () => {
 
 		nodeFS.renameSync = originalRenameSync
 	})
+
+	test('EXDEV fallback keeps the source when copy fails, even with force defaults', () => {
+		const forced = new FileSystem({ force: true, silent: true })
+		forced.cd(tempDir.name)
+		forced.touch('source.txt', 'precious')
+		const originalRenameSync = nodeFS.renameSync
+		nodeFS.renameSync = jest.fn(() => {
+			throw Object.assign(new Error('Cross-device link'), {
+				code: 'EXDEV',
+			})
+		})
+		jest.spyOn(nodeFS, 'copyFileSync').mockImplementation(() => {
+			throw Object.assign(new Error('disk full'), { code: 'ENOSPC' })
+		})
+		try {
+			forced.move('source.txt', 'destination.txt')
+		} finally {
+			nodeFS.renameSync = originalRenameSync
+			jest.restoreAllMocks()
+		}
+		expect(forced.readFile('source.txt', { encoding: 'utf8' })).toBe(
+			'precious',
+		)
+	})
 })

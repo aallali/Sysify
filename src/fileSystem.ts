@@ -441,9 +441,15 @@ export class FileSystem {
 				if ((error as NodeJS.ErrnoException).code !== 'EXDEV')
 					throw error
 				// Different devices: rename can't work, copy then delete
+				// Never swallow a copy failure here, or the delete loses the source
+				const inner = { silent: true, force: false }
 				const { overwrite } = options
-				this.copy(source, destination, { recursive: true, overwrite })
-				this.delete(source, { recursive: true })
+				this.copy(source, destination, {
+					...inner,
+					recursive: true,
+					overwrite,
+				})
+				this.delete(source, { ...inner, recursive: true })
 			}
 			this.logger.debug(`Moved ${sourcePath} to ${destPath}`)
 		})
