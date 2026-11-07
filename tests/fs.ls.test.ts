@@ -42,32 +42,21 @@ describe('FileSystem - LS command', () => {
 		)
 	})
 
-	test('should throw error when directory is not readable', () => {
-		let unreadableDir = 'unreadable-dir'
+	// chmod is a no-op on Windows
+	const itPosix = process.platform === 'win32' ? test.skip : test
+	itPosix('should throw error when directory is not readable', () => {
 		const tempDir = tmp.dirSync({ unsafeCleanup: true })
+		const unreadableDir = path.join(tempDir.name, 'unreadable-dir')
 		const fs_ = new FileSystem()
 		fs_.cd(tempDir.name)
-		// Create a directory with restricted permissions
-		unreadableDir = path.join(tempDir.name, 'unreadable-dir')
-		nodeFS.mkdirSync(unreadableDir)
-		// Only run this test if we're not on Windows (chmod works differently there)
-		if (process.platform !== 'win32') {
-			// Make the directory unreadable
-			nodeFS.chmodSync(unreadableDir, 0)
-
-			// Attempt to list the contents should fail with EACCES
-			fs_.cd(tempDir.name)
+		nodeFS.mkdirSync(unreadableDir, { mode: 0 })
+		try {
 			expect(() => fs_.ls('unreadable-dir')).toThrow(
 				/^EACCES: permission denied, scandir/,
 			)
+		} finally {
+			nodeFS.chmodSync(unreadableDir, 0o755)
+			tempDir.removeCallback()
 		}
-		// Fix permissions to allow cleanup
-		try {
-			nodeFS.chmodSync(unreadableDir, 493)
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		} catch (e) {
-			// Ignore any errors during cleanup
-		}
-		tempDir.removeCallback()
 	})
 })

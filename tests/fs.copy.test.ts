@@ -95,13 +95,16 @@ describe('FileSystem - COPY command', () => {
 	test('should not throw an error if permission insuffisant to copy a file', () => {
 		const sourceFile = 'source.txt'
 		const destFile = 'destination.txt'
-		expect(() => {
-			fs.touch(sourceFile, '#######')
-			nodeFS.chmodSync(path.join(`${fs.pwd()}/`, sourceFile), 0o000)
-
-			fs.copy(sourceFile, destFile)
-		}).toThrow(/^EACCES: permission denied, copyfile/)
-		nodeFS.chmodSync(path.join(`${fs.pwd()}/`, sourceFile), 0o644)
+		const sourcePath = path.join(fs.pwd(), sourceFile)
+		fs.touch(sourceFile, '#######')
+		nodeFS.chmodSync(sourcePath, 0o000)
+		try {
+			expect(() => fs.copy(sourceFile, destFile)).toThrow(
+				/^EACCES: permission denied, copyfile/,
+			)
+		} finally {
+			nodeFS.chmodSync(sourcePath, 0o644)
+		}
 	})
 
 	test('should not throw an error when silent=true', () => {
