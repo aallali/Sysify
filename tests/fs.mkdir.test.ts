@@ -64,4 +64,11 @@ describe('FileSystem - MKDIR command', () => {
 		expect(existsSync(absDir)).toBe(true)
 		fs.cd(tempDir)
 	})
+
+	test('should create nested directories with recursive=true', () => {
+		fs.mkdir('a/b/c', { recursive: true })
+		expect(existsSync(path.join(tempDir, 'a/b/c'))).toBe(true)
+		// like `mkdir -p`: existing directory is not an error
+		expect(() => fs.mkdir('a/b/c', { recursive: true })).not.toThrow()
+	})
 })

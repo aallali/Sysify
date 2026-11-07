@@ -6,715 +6,503 @@ import path from 'node:path'
 import { Logger, type LogLevel } from './logger'
 import { FileSystemError } from './fileSystem.error'
 import type {
-	DeleteOptions,
-	MkdirOptions,
+	CommandOptions,
 	CopyOptions,
+	DeleteOptions,
+	FileSystemOptions,
+	MkdirOptions,
 	MoveOptions,
 	ReadFileOptions,
+	WriteFileOptions,
 } from './fileSystem.type'
 
+/**
+ * Throws a `FileSystemError` for a failure detected by Sysify itself
+ * (as opposed to one raised by Node's `fs`).
+ */
+function fail(
+	operation: string,
+	code: string,
+	message: string,
+	filePath?: string,
+): never {
+	throw new FileSystemError({ operation, code, message, path: filePath })
+}
+
+/**
+ * Synchronous, shell-like file system API with its own working directory.
+ *
+ * Every command accepts `silent` (don't log errors) and `force` (don't throw;
+ * return a fallback value). Defaults for both can be set in the constructor.
+ * Failures throw a {@link FileSystemError} with an errno-style `code`.
+ *
+ * @example
+ * const fs = new FileSystem()
+ * fs.mkdir('projects/demo', { recursive: true })
+ * fs.cd('projects/demo')
+ * fs.writeFile('notes.txt', 'hello')
+ * fs.ls() // ['notes.txt']
+ */
 export class FileSystem {
 	private currentDir: string
 	private logger: Logger
 	private defaultSilent: boolean
 	private defaultForce: boolean
 
-	constructor(options?: {
-		silent?: boolean
-		force?: boolean
-		logLevel?: LogLevel
-	}) {
-		const logLevel =
-			options?.logLevel || (process.env.LOG_LEVEL as LogLevel) || 'warn'
-		this.defaultSilent = options?.silent || false
-		this.defaultForce = options?.force || false
+	/**
+	 * @param options - Global defaults applied to every command
+	 * @param options.silent - Don't log errors (default: `false`)
+	 * @param options.force - Don't throw errors (default: `false`)
+	 * @param options.logLevel - Logger level (default: `LOG_LEVEL` env, then `'warn'`)
+	 */
+	constructor(options: FileSystemOptions = {}) {
+		this.defaultSilent = options.silent ?? false
+		this.defaultForce = options.force ?? false
 		this.currentDir = process.cwd()
 		this.logger = new Logger('sysify')
-		this.logger.setLevel(logLevel)
-		this.logger.debug(`Current directory: ${this.pwd()}`)
-	}
-
-	// Helper method to merge global & method options
-	private getErrorOptions(methodOptions?: {
-		silent?: boolean
-		force?: boolean
-	}): {
-		silent: boolean
-		force: boolean
-	} {
-		return {
-			silent: methodOptions?.silent ?? this.defaultSilent,
-			force: methodOptions?.force ?? this.defaultForce,
-		}
+		this.logger.setLevel(
+			options.logLevel || (process.env.LOG_LEVEL as LogLevel) || 'warn',
+		)
+		this.logger.debug(`Current directory: ${this.currentDir}`)
 	}
 
 	/**
-	 * Returns the logger instance
-	 * @returns {Logger} The logger instance for this FileSystem
-	 * @example
-	 * const fs = new FileSystem();
-	 * const logger = fs.getLogger();
-	 * logger.info('Custom message');
+	 * Returns the logger used by this instance (e.g. to change its level).
 	 */
 	public getLogger(): Logger {
 		return this.logger
 	}
 
 	/**
-	 * Returns the current working directory path
-	 * @returns {string} The absolute path of the current directory
-	 * @example
-	 * const fs = new FileSystem();
-	 * console.log(fs.pwd()); // e.g. '/home/user/projects'
+	 * Returns the current working directory (absolute path).
+	 * Starts at `process.cwd()`; only {@link cd} changes it.
 	 */
 	public pwd(): string {
 		return this.currentDir
 	}
 
 	/**
-	 * Creates a new directory
-	 * @param {string} dirName - Path of the directory to create (absolute or relative)
-	 * @param {MkdirOptions} [options={}] - Directory creation options
-	 * @param {boolean} [options.silent=false] - When true, suppresses errors if directory exists
-	 * @throws {FileSystemError} If directory already exists or cannot be created
+	 * Returns `true` if the path exists (file, directory or other). Never throws.
+	 * @param target - Absolute path, or relative to {@link pwd}
+	 */
+	public exists(target: string): boolean {
+		return fs.existsSync(this.resolve(target))
+	}
+
+	/**
+	 * Returns metadata (size, mode, timestamps, `isFile()`, ...) for a path.
+	 * @param target - Absolute path, or relative to {@link pwd}
+	 * @returns The `fs.Stats`, or `undefined` on error with `force: true`
+	 * @throws {FileSystemError} `ENOENT` if the path doesn't exist
+	 */
+	public stat(
+		target: string,
+		options: CommandOptions = {},
+	): fs.Stats | undefined {
+		return this.run('stat', target, options, undefined, () =>
+			fs.statSync(this.resolve(target)),
+		)
+	}
+
+	/**
+	 * Creates a directory.
+	 * @param dirName - Absolute path, or relative to {@link pwd}
+	 * @param options.recursive - Create missing parents; no error if it exists (like `mkdir -p`)
+	 * @throws {FileSystemError} `EINVAL` if `dirName` is empty, `EEXIST` if it exists (without `recursive`)
 	 * @example
-	 * // Create a directory
-	 * fs.mkdir('new-directory');
-	 *
-	 * // Create silently (no error if exists)
-	 * fs.mkdir('existing-directory', { silent: true });
+	 * fs.mkdir('a/b/c', { recursive: true })
 	 */
 	public mkdir(dirName: string, options: MkdirOptions = {}): void {
-		const { silent, force } = this.getErrorOptions(options)
-
-		if (!dirName) {
-			return this.handleError<void>({
-				operation: 'mkdir',
-				message: 'missing operand',
-				silent,
-				force,
-			})
-		}
-
-		const newDirPath = path.resolve(this.currentDir, dirName)
-
-		try {
-			if (fs.existsSync(newDirPath)) {
-				return this.handleError({
-					operation: 'mkdir',
-					message: `cannot create directory '${dirName}': Directory exists`,
-					path: dirName,
-					silent,
-					force,
-				})
+		this.run('mkdir', dirName, options, undefined, () => {
+			if (!dirName) fail('mkdir', 'EINVAL', 'missing operand')
+			const dirPath = this.resolve(dirName)
+			if (!options.recursive && fs.existsSync(dirPath)) {
+				fail(
+					'mkdir',
+					'EEXIST',
+					`cannot create directory '${dirName}': Directory exists`,
+					dirName,
+				)
 			}
-
-			fs.mkdirSync(newDirPath)
-			this.logger.debug(`Directory created: ${newDirPath}`)
-		} catch (error) {
-			return this.handleError({
-				operation: 'mkdir',
-				message: `failed to create directory '${dirName}'`,
-				path: dirName,
-				originalError: error as Error,
-				silent,
-				force,
-			})
-		}
+			fs.mkdirSync(dirPath, { recursive: !!options.recursive })
+			this.logger.debug(`Directory created: ${dirPath}`)
+		})
 	}
 
 	/**
-	 * Changes the current working directory
-	 * @param {string} dirName - Directory path to navigate to (absolute or relative)
-	 * @param {object} [options={}] - Options for changing directory
-	 * @param {boolean} [options.silent=false] - When true, suppresses logs
-	 * @param {boolean} [options.force=false] - When true, ignores errors
-	 * @throws {FileSystemError} If directory doesn't exist or is not a directory
+	 * Changes the working directory. If the exact name isn't found, a
+	 * case-insensitive match in the parent directory is used.
+	 * @param dirName - Absolute path, or relative to {@link pwd}
+	 * @throws {FileSystemError} `ENOENT` if not found, `ENOTDIR` if it is not a directory
 	 */
-	public cd(
-		dirName: string,
-		options: { silent?: boolean; force?: boolean } = {},
-	): void {
-		const { silent, force } = this.getErrorOptions(options)
-
-		try {
+	public cd(dirName: string, options: CommandOptions = {}): void {
+		this.run('cd', dirName, options, undefined, () => {
 			const newDir = this.resolveCaseInsensitivePath(dirName)
-
 			if (!newDir) {
-				return this.handleError({
-					operation: 'cd',
-					message: `no such file or directory: ${dirName}`,
-					path: dirName,
-					silent,
-					force,
-				})
+				fail(
+					'cd',
+					'ENOENT',
+					`no such file or directory: ${dirName}`,
+					dirName,
+				)
 			}
-
 			if (!fs.statSync(newDir).isDirectory()) {
-				return this.handleError({
-					operation: 'cd',
-					message: `not a directory: ${dirName}`,
-					path: dirName,
-					silent,
-					force,
-				})
+				fail('cd', 'ENOTDIR', `not a directory: ${dirName}`, dirName)
 			}
-
 			this.currentDir = newDir
 			this.logger.debug(`Changed directory to: ${this.currentDir}`)
-		} catch (error) {
-			return this.handleError({
-				operation: 'cd',
-				message: `no such file or directory: ${dirName}`,
-				path: dirName,
-				originalError: error as Error,
-				silent,
-				force,
-			})
-		}
-	}
-
-	private resolveCaseInsensitivePath(dirName: string): string | null {
-		const resolvedPath = path.resolve(this.currentDir, dirName)
-
-		// If the path exists, return it directly
-		if (fs.existsSync(resolvedPath)) {
-			return resolvedPath
-		}
-
-		// Handle case-insensitive resolution
-		const parentDir = path.dirname(resolvedPath)
-		const targetName = path.basename(resolvedPath)
-
-		if (!fs.existsSync(parentDir)) {
-			return null
-		}
-
-		const dirContents = fs.readdirSync(parentDir)
-		const match = dirContents.find(
-			(entry) => entry.toLowerCase() === targetName.toLowerCase(),
-		)
-
-		return match ? path.join(parentDir, match) : null
+		})
 	}
 
 	/**
-	 * Creates an empty file or writes content to a new file
-	 * @param {string} fileName - Name of the file to create
-	 * @param {string|Buffer} [content=''] - Optional content to write to the file
-	 * @param {object} [options={}] - Options for creating files
-	 * @param {boolean} [options.silent=false] - When true, suppresses logs
-	 * @param {boolean} [options.force=false] - When true, ignores errors
-	 * @throws {FileSystemError} If file already exists
+	 * Creates a new file. Unlike shell `touch`, it fails if the file exists;
+	 * use {@link writeFile} to overwrite or append.
+	 * @param fileName - Absolute path, or relative to {@link pwd}
+	 * @param content - Initial content (UTF-8 string or `Buffer`)
+	 * @throws {FileSystemError} `EEXIST` if the file already exists
 	 */
 	public touch(
 		fileName: string,
 		content: string | Buffer = '',
-		options: { silent?: boolean; force?: boolean } = {},
+		options: CommandOptions = {},
 	): void {
-		const { silent, force } = this.getErrorOptions(options)
-		const newFilePath = path.resolve(this.currentDir, fileName)
-
-		try {
-			if (fs.existsSync(newFilePath)) {
-				return this.handleError({
-					operation: 'touch',
-					message: `cannot create file '${fileName}': File exists`,
-					path: fileName,
-					silent,
-					force,
-				})
+		this.run('touch', fileName, options, undefined, () => {
+			const filePath = this.resolve(fileName)
+			if (fs.existsSync(filePath)) {
+				fail(
+					'touch',
+					'EEXIST',
+					`cannot create file '${fileName}': File exists`,
+					fileName,
+				)
 			}
-
-			const bufferContent = Buffer.isBuffer(content)
-				? content
-				: Buffer.from(content, 'utf-8')
-
-			fs.writeFileSync(newFilePath, bufferContent)
-			this.logger.info(`File created: ${newFilePath}`)
-		} catch (error) {
-			return this.handleError({
-				operation: 'touch',
-				message: `failed to create file '${fileName}'`,
-				path: fileName,
-				originalError: error as Error,
-				silent,
-				force,
-			})
-		}
+			fs.writeFileSync(filePath, content)
+			this.logger.info(`File created: ${filePath}`)
+		})
 	}
 
 	/**
-	 * Lists files and directories in the specified path
-	 * @param {string} [targetPath] - Path to list contents of (defaults to current directory)
-	 * @returns {string[]} Array of file and directory names (directories end with '/')
-	 * @throws {FileSystemError} If path doesn't exist or is not a directory
+	 * Writes a file, creating it or replacing its content.
+	 * @param fileName - Absolute path, or relative to {@link pwd}
+	 * @param data - String or `Buffer`
+	 * @param options.append - Append instead of replacing
+	 * @param options.encoding - Encoding for string data (default: `'utf8'`)
+	 * @throws {FileSystemError} e.g. `ENOENT` if the parent directory doesn't exist, `EISDIR`
 	 */
-	public ls(targetPath?: string): string[] {
-		const { silent, force } = this.getErrorOptions()
-		const dirToRead = targetPath
-			? path.resolve(this.currentDir, targetPath)
-			: this.currentDir
-
-		try {
-			if (
-				!fs.existsSync(dirToRead) ||
-				!fs.statSync(dirToRead).isDirectory()
-			) {
-				return this.handleError<string[]>({
-					operation: 'ls',
-					message: `Path '${dirToRead}' does not exist or is not a directory.`,
-					path: targetPath,
-					silent,
-					force,
-					returnValue: [], // Return empty array when force=true
-				})
-			}
-
-			const entries = fs.readdirSync(dirToRead)
-			const listing = entries.map((entry) => {
-				const fullPath = path.join(dirToRead, entry)
-				return fs.statSync(fullPath).isDirectory() ? `${entry}/` : entry
-			})
-
-			return listing
-		} catch (error) {
-			return this.handleError<string[]>({
-				operation: 'ls',
-				message: `Failed to list files in: ${dirToRead}`,
-				path: targetPath,
-				originalError: error as Error,
-				silent,
-				force,
-				returnValue: [], // Return empty array when force=true
-			})
-		}
+	public writeFile(
+		fileName: string,
+		data: string | Buffer,
+		options: WriteFileOptions = {},
+	): void {
+		this.run('writeFile', fileName, options, undefined, () => {
+			const filePath = this.resolve(fileName)
+			const write = options.append ? fs.appendFileSync : fs.writeFileSync
+			write(filePath, data, { encoding: options.encoding })
+			this.logger.debug(`File written: ${filePath}`)
+		})
 	}
 
 	/**
-	 * Deletes files or directories
-	 * @param {string} target - Path to file or directory to delete
-	 * @param {DeleteOptions} [options={}] - Delete operation options
-	 * @param {boolean} [options.recursive=false] - When true, recursively deletes directories and their contents
-	 * @param {boolean} [options.force=false] - When true, ignores non-existent files and continues execution
-	 * @param {boolean} [options.silent=false] - When true, suppresses log messages
-	 * @throws {FileSystemError} If target doesn't exist or is a directory without recursive option
+	 * Lists a directory. Directory names end with `/`.
+	 * @param targetPath - Directory to list (default: {@link pwd})
+	 * @returns Entry names, or `[]` on error with `force: true`
+	 * @throws {FileSystemError} `ENOENT` if missing or not a directory, `EACCES`
+	 */
+	public ls(targetPath?: string, options: CommandOptions = {}): string[] {
+		return this.run('ls', targetPath, options, [], () => {
+			const dir = targetPath ? this.resolve(targetPath) : this.currentDir
+			if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+				fail(
+					'ls',
+					'ENOENT',
+					`Path '${dir}' does not exist or is not a directory.`,
+					targetPath,
+				)
+			}
+			return fs
+				.readdirSync(dir, { withFileTypes: true })
+				.map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
+		})
+	}
+
+	/**
+	 * Deletes a file, or a directory with `recursive: true`.
+	 * @param target - Absolute path, or relative to {@link pwd}
+	 * @param options.recursive - Required for directories (like `rm -r`)
+	 * @throws {FileSystemError} `ENOENT` if missing, `EISDIR` for a directory without `recursive`
 	 */
 	public delete(target: string, options: DeleteOptions = {}): void {
-		const { recursive = false } = options
-		const { silent, force } = this.getErrorOptions(options)
-		const targetPath = path.resolve(this.currentDir, target)
-
-		try {
+		this.run('delete', target, options, undefined, () => {
+			const targetPath = this.resolve(target)
 			if (!fs.existsSync(targetPath)) {
-				return this.handleError({
-					operation: 'delete',
-					message: `cannot delete '${target}': No such file or directory`,
-					path: target,
-					silent,
-					force,
-				})
+				fail(
+					'delete',
+					'ENOENT',
+					`cannot delete '${target}': No such file or directory`,
+					target,
+				)
 			}
-
-			const stats = fs.statSync(targetPath)
-
-			if (stats.isDirectory()) {
-				if (!recursive) {
-					return this.handleError({
-						operation: 'delete',
-						message: `'${target}' is a directory (use recursive option to delete)`,
-						path: target,
-						silent,
-						force,
-					})
-				}
-
-				for (const entry of fs.readdirSync(targetPath)) {
-					this.delete(path.join(target, entry), {
-						recursive,
-						force,
-						silent,
-					})
-				}
-
-				fs.rmdirSync(targetPath)
-			} else {
-				fs.unlinkSync(targetPath)
+			if (fs.lstatSync(targetPath).isDirectory() && !options.recursive) {
+				fail(
+					'delete',
+					'EISDIR',
+					`'${target}' is a directory (use recursive option to delete)`,
+					target,
+				)
 			}
-
-			if (!silent) {
-				this.logger.info(`Deleted: ${targetPath}`)
-			}
-		} catch (error) {
-			return this.handleError({
-				operation: 'delete',
-				message: `error when deleting ${target}`,
-				path: target,
-				originalError: error as Error,
-				silent,
-				force,
-			})
-		}
+			fs.rmSync(targetPath, { recursive: !!options.recursive })
+			this.logger.info(`Deleted: ${targetPath}`)
+		})
 	}
 
 	/**
-	 * Copies a file or directory from source to destination
-	 * @param {string} source - Path to the source file or directory
-	 * @param {string} destination - Path to the destination
-	 * @param {CopyOptions} [options={}] - Copy operation options
+	 * Copies a file, or a directory with `recursive: true`.
+	 * @param source - Absolute path, or relative to {@link pwd}
+	 * @param destination - Absolute path, or relative to {@link pwd}
+	 * @param options.recursive - Required for directories (like `cp -r`)
+	 * @param options.overwrite - Replace the destination if it exists
+	 * @throws {FileSystemError} `ENOENT`, `EEXIST` (without `overwrite`), `EISDIR` (directory without `recursive`), `ENOTSUP` (sockets, devices...)
 	 */
 	public copy(
 		source: string,
 		destination: string,
 		options: CopyOptions = {},
 	): void {
-		const { recursive = false, overwrite = false } = options
-		const { silent, force } = this.getErrorOptions(options)
-		const sourcePath = path.resolve(this.currentDir, source)
-		const destPath = path.resolve(this.currentDir, destination)
-
-		try {
-			// Check if source exists
-			if (!fs.existsSync(sourcePath)) {
-				return this.handleError({
-					operation: 'copy',
-					message: `cannot copy '${source}': No such file or directory`,
-					path: source,
-					silent,
-					force,
-				})
-			}
-
-			// Check if destination already exists
-			if (fs.existsSync(destPath) && !overwrite) {
-				return this.handleError({
-					operation: 'copy',
-					message: `'${destination}' already exists`,
-					path: destination,
-					silent,
-					force,
-				})
-			}
-
-			const sourceStats = fs.statSync(sourcePath)
-
-			// Handle file copy
-			if (sourceStats.isFile()) {
-				try {
-					fs.copyFileSync(
-						sourcePath,
-						destPath,
-						overwrite ? undefined : fs.constants.COPYFILE_EXCL,
-					)
-					if (!silent) {
-						this.logger.debug(
-							`File copied from ${sourcePath} to ${destPath}`,
-						)
-					}
-				} catch (copyError) {
-					return this.handleError({
-						operation: 'copy',
-						message: `failed to copy '${source}' to '${destination}'`,
-						path: source,
-						originalError: copyError as Error,
-						silent,
-						force,
-					})
-				}
-				return
-			}
-
-			// Handle directory copy
-			if (sourceStats.isDirectory()) {
-				if (!recursive) {
-					return this.handleError({
-						operation: 'copy',
-						message: `omitting directory '${source}' (use recursive option to copy)`,
-						path: source,
-						silent,
-						force,
-					})
-				}
-
-				if (!fs.existsSync(destPath)) {
-					fs.mkdirSync(destPath, { recursive: true })
-				}
-
-				const files = fs.readdirSync(sourcePath)
-
-				for (const file of files) {
-					const srcFile = path.join(source, file)
-					const destFile = path.join(destination, file)
-					this.copy(srcFile, destFile, {
-						recursive,
-						overwrite,
-						silent,
-						force,
-					})
-				}
-
-				if (!silent) {
-					this.logger.debug(
-						`Directory copied from ${sourcePath} to ${destPath}`,
+		this.run('copy', source, options, undefined, () => {
+			const { sourcePath, destPath } = this.checkTransfer(
+				'copy',
+				source,
+				destination,
+				options.overwrite,
+			)
+			const stats = fs.statSync(sourcePath)
+			if (stats.isFile()) {
+				fs.copyFileSync(
+					sourcePath,
+					destPath,
+					options.overwrite ? 0 : fs.constants.COPYFILE_EXCL,
+				)
+			} else if (stats.isDirectory()) {
+				if (!options.recursive) {
+					fail(
+						'copy',
+						'EISDIR',
+						`omitting directory '${source}' (use recursive option to copy)`,
+						source,
 					)
 				}
-				return
+				fs.cpSync(sourcePath, destPath, {
+					recursive: true,
+					force: !!options.overwrite,
+				})
+			} else {
+				fail(
+					'copy',
+					'ENOTSUP',
+					`unsupported file type for '${source}'`,
+					source,
+				)
 			}
-
-			// Handle unsupported file types
-			return this.handleError({
-				operation: 'copy',
-				message: `unsupported file type for '${source}'`,
-				path: source,
-				silent,
-				force,
-			})
-		} catch (error) {
-			return this.handleError({
-				operation: 'copy',
-				message: `error copying ${source} to ${destination}`,
-				path: source,
-				originalError: error as Error,
-				silent,
-				force,
-			})
-		}
+			this.logger.debug(`Copied ${sourcePath} to ${destPath}`)
+		})
 	}
 
 	/**
-	 * Moves a file or directory from source to destination
-	 * @param {string} source - Path to the source file or directory
-	 * @param {string} destination - Path to the destination
-	 * @param {MoveOptions} [options={}] - Move operation options
+	 * Moves a file or directory. Falls back to copy + delete across devices.
+	 * @param source - Absolute path, or relative to {@link pwd}
+	 * @param destination - Absolute path, or relative to {@link pwd}
+	 * @param options.overwrite - Replace the destination if it exists
+	 * @throws {FileSystemError} `ENOENT` if the source is missing, `EEXIST` (without `overwrite`)
 	 */
 	public move(
 		source: string,
 		destination: string,
 		options: MoveOptions = {},
 	): void {
-		const { overwrite = false } = options
-		const { silent, force } = this.getErrorOptions(options)
-		const sourcePath = path.resolve(this.currentDir, source)
-		const destPath = path.resolve(this.currentDir, destination)
-
-		try {
-			// Check if source exists
-			if (!fs.existsSync(sourcePath)) {
-				return this.handleError({
-					operation: 'move',
-					message: `cannot move '${source}': No such file or directory`,
-					path: source,
-					silent,
-					force,
-				})
-			}
-
-			// Check if destination already exists
-			if (fs.existsSync(destPath) && !overwrite) {
-				return this.handleError({
-					operation: 'move',
-					message: `'${destination}' already exists`,
-					path: destination,
-					silent,
-					force,
-				})
-			}
-
+		this.run('move', source, options, undefined, () => {
+			const { sourcePath, destPath } = this.checkTransfer(
+				'move',
+				source,
+				destination,
+				options.overwrite,
+			)
 			try {
 				fs.renameSync(sourcePath, destPath)
-				if (!silent) {
-					this.logger.debug(`Moved from ${sourcePath} to ${destPath}`)
-				}
-			} catch (moveError) {
-				// If rename fails (possibly due to different filesystems), try copy + delete
-				if ((moveError as NodeJS.ErrnoException).code === 'EXDEV') {
-					this.copy(source, destination, {
-						recursive: true,
-						overwrite,
-						silent,
-						force,
-					})
-					this.delete(source, {
-						recursive: true,
-						silent,
-						force,
-					})
-				} else {
-					return this.handleError({
-						operation: 'move',
-						message: `failed to move '${source}' to '${destination}'`,
-						path: source,
-						originalError: moveError as Error,
-						silent,
-						force,
-					})
-				}
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== 'EXDEV')
+					throw error
+				// Different devices: rename can't work, copy then delete
+				const { overwrite } = options
+				this.copy(source, destination, { recursive: true, overwrite })
+				this.delete(source, { recursive: true })
 			}
-		} catch (error) {
-			return this.handleError({
-				operation: 'move',
-				message: `error moving ${source} to ${destination}`,
-				path: source,
-				originalError: error as Error,
-				silent,
-				force,
-			})
-		}
+			this.logger.debug(`Moved ${sourcePath} to ${destPath}`)
+		})
 	}
 
 	/**
-	 * Renames a file or directory
-	 * @param {string} oldPath - Current path of the file or directory
-	 * @param {string} newPath - New path for the file or directory
+	 * Renames a file or directory. Never replaces an existing destination.
+	 * @param oldPath - Absolute path, or relative to {@link pwd}
+	 * @param newPath - Absolute path, or relative to {@link pwd}
+	 * @throws {FileSystemError} `ENOENT` if missing (or destination folder missing), `EEXIST` if the new path exists
 	 */
-	public rename(oldPath: string, newPath: string): void {
-		const { silent, force } = this.getErrorOptions()
-		const resolvedOldPath = path.resolve(this.currentDir, oldPath)
-		const resolvedNewPath = path.resolve(this.currentDir, newPath)
-
-		try {
-			// Check if source exists
-			if (!fs.existsSync(resolvedOldPath)) {
-				return this.handleError({
-					operation: 'rename',
-					message: `cannot rename '${oldPath}': No such file or directory`,
-					path: oldPath,
-					silent,
-					force,
-				})
-			}
-
-			// Check if destination already exists
-			if (fs.existsSync(resolvedNewPath)) {
-				return this.handleError({
-					operation: 'rename',
-					message: `cannot rename to '${newPath}': File exists`,
-					path: newPath,
-					silent,
-					force,
-				})
-			}
-
-			fs.renameSync(resolvedOldPath, resolvedNewPath)
-			if (!silent) {
-				this.logger.debug(
-					`Renamed from ${resolvedOldPath} to ${resolvedNewPath}`,
+	public rename(
+		oldPath: string,
+		newPath: string,
+		options: CommandOptions = {},
+	): void {
+		this.run('rename', oldPath, options, undefined, () => {
+			const from = this.resolve(oldPath)
+			const to = this.resolve(newPath)
+			if (!fs.existsSync(from)) {
+				fail(
+					'rename',
+					'ENOENT',
+					`cannot rename '${oldPath}': No such file or directory`,
+					oldPath,
 				)
 			}
-		} catch (error) {
-			return this.handleError({
-				operation: 'rename',
-				message: `failed to rename '${oldPath}' to '${newPath}'`,
-				path: oldPath,
-				originalError: error as Error,
-				silent,
-				force,
-			})
-		}
+			if (fs.existsSync(to)) {
+				fail(
+					'rename',
+					'EEXIST',
+					`cannot rename to '${newPath}': File exists`,
+					newPath,
+				)
+			}
+			fs.renameSync(from, to)
+			this.logger.debug(`Renamed ${from} to ${to}`)
+		})
 	}
 
 	/**
-	 * Reads a file and returns its content
-	 * @param {string} filePath - Path to the file to read
-	 * @param {ReadFileOptions} [options] - Read operation options
-	 * @returns {string|Buffer} File contents as string (if encoding specified) or Buffer
+	 * Reads a file. Returns a string when `encoding` is set, otherwise a `Buffer`.
+	 * On error with `force: true`, returns an empty string / `Buffer`.
+	 * @param filePath - Absolute path, or relative to {@link pwd}
+	 * @throws {FileSystemError} `ENOENT` if missing, `EISDIR` for a directory, `EACCES`
+	 * @example
+	 * const text = fs.readFile('notes.txt', { encoding: 'utf8' }) // string
+	 * const bytes = fs.readFile('image.png') // Buffer
 	 */
 	public readFile(
 		filePath: string,
-		options?: ReadFileOptions & { silent?: boolean; force?: boolean },
+		options: ReadFileOptions & { encoding: BufferEncoding },
+	): string
+	public readFile(
+		filePath: string,
+		options?: ReadFileOptions & { encoding?: undefined },
+	): Buffer
+	public readFile(
+		filePath: string,
+		options?: ReadFileOptions,
+	): string | Buffer
+	public readFile(
+		filePath: string,
+		options: ReadFileOptions = {},
 	): string | Buffer {
-		const { silent, force } = this.getErrorOptions(options)
-		const resolvedPath = path.resolve(this.currentDir, filePath)
-
-		try {
-			if (!fs.existsSync(resolvedPath)) {
-				return this.handleError<string | Buffer>({
-					operation: 'readFile',
-					message: `cannot read '${filePath}': No such file or directory`,
-					path: filePath,
-					silent,
-					force,
-					returnValue: Buffer.alloc(0), // Return empty buffer when force=true
-				})
+		const fallback = options.encoding ? '' : Buffer.alloc(0)
+		return this.run('readFile', filePath, options, fallback, () => {
+			const resolved = this.resolve(filePath)
+			if (!fs.existsSync(resolved)) {
+				fail(
+					'readFile',
+					'ENOENT',
+					`cannot read '${filePath}': No such file or directory`,
+					filePath,
+				)
 			}
-
-			const stats = fs.statSync(resolvedPath)
-			if (!stats.isFile()) {
-				return this.handleError<string | Buffer>({
-					operation: 'readFile',
-					message: `cannot read '${filePath}': Is a directory`,
-					path: filePath,
-					silent,
-					force,
-					returnValue: Buffer.alloc(0), // Return empty buffer when force=true
-				})
+			if (fs.statSync(resolved).isDirectory()) {
+				fail(
+					'readFile',
+					'EISDIR',
+					`cannot read '${filePath}': Is a directory`,
+					filePath,
+				)
 			}
-
-			if (options?.encoding) {
-				return fs.readFileSync(resolvedPath, {
-					encoding: options.encoding,
-					flag: options.flag,
-				})
-			}
-			return fs.readFileSync(resolvedPath)
-		} catch (error) {
-			return this.handleError<string | Buffer>({
-				operation: 'readFile',
-				message: `error reading ${filePath}`,
-				path: filePath,
-				originalError: error as Error,
-				silent,
-				force,
-				returnValue: Buffer.alloc(0), // Return empty buffer when force=true
+			return fs.readFileSync(resolved, {
+				encoding: options.encoding,
+				flag: options.flag,
 			})
-		}
+		})
 	}
 
-	private handleError<T>(options: {
-		operation: string
-		message: string
-		path?: string
-		originalError?: Error
-		silent?: boolean
-		force?: boolean
-		returnValue?: T
-	}): T {
-		const {
-			operation,
-			message,
-			path,
-			originalError,
-			silent = false,
-			force = false,
-		} = options
+	private resolve(target: string): string {
+		return path.resolve(this.currentDir, target)
+	}
 
-		// Already handled (and logged) inside the try block: don't re-wrap
-		if (originalError instanceof FileSystemError) throw originalError
-
-		const code = (originalError as NodeJS.ErrnoException | undefined)?.code
-		const fullMessage = originalError
-			? `${operation}: ${message}: ${originalError.message}`
-			: `${operation}: ${message}`
-
-		const fsError = new FileSystemError({
-			message: fullMessage,
-			operation,
-			code,
-			path,
-			originalError,
-		})
-
-		// Handle logging (controlled by silent)
-		if (!silent) {
-			this.logger.error(fullMessage)
+	/** Shared source/destination checks for `copy` and `move`. */
+	private checkTransfer(
+		operation: string,
+		source: string,
+		destination: string,
+		overwrite = false,
+	): { sourcePath: string; destPath: string } {
+		const sourcePath = this.resolve(source)
+		const destPath = this.resolve(destination)
+		if (!fs.existsSync(sourcePath)) {
+			fail(
+				operation,
+				'ENOENT',
+				`cannot ${operation} '${source}': No such file or directory`,
+				source,
+			)
 		}
-
-		// Handle error propagation (controlled by force)
-		if (!force) {
-			throw fsError
+		if (!overwrite && fs.existsSync(destPath)) {
+			fail(
+				operation,
+				'EEXIST',
+				`'${destination}' already exists`,
+				destination,
+			)
 		}
+		return { sourcePath, destPath }
+	}
 
-		// When force=true, return the provided fallback value (or undefined)
-		return options.returnValue as T
+	private resolveCaseInsensitivePath(dirName: string): string | null {
+		const resolvedPath = this.resolve(dirName)
+		if (fs.existsSync(resolvedPath)) return resolvedPath
+
+		const parentDir = path.dirname(resolvedPath)
+		if (!fs.existsSync(parentDir)) return null
+
+		const target = path.basename(resolvedPath).toLowerCase()
+		const match = fs
+			.readdirSync(parentDir)
+			.find((entry) => entry.toLowerCase() === target)
+		return match ? path.join(parentDir, match) : null
+	}
+
+	/**
+	 * Runs a command with uniform error handling: wraps Node errors in
+	 * `FileSystemError` (keeping their `code`), logs unless `silent`,
+	 * throws unless `force` (then returns `fallback`).
+	 */
+	private run<T>(
+		operation: string,
+		target: string | undefined,
+		options: CommandOptions,
+		fallback: T,
+		fn: () => T,
+	): T {
+		try {
+			return fn()
+		} catch (error) {
+			// Node fs errors fail `instanceof Error` across realms (e.g. Jest)
+			const err =
+				error instanceof FileSystemError
+					? error
+					: new FileSystemError({
+							operation,
+							message: (error as Error)?.message ?? String(error),
+							code: (error as NodeJS.ErrnoException)?.code,
+							path: target,
+							originalError: error as Error,
+						})
+			if (!(options.silent ?? this.defaultSilent)) {
+				this.logger.error(err.message)
+			}
+			if (!(options.force ?? this.defaultForce)) throw err
+			return fallback
+		}
 	}
 }
