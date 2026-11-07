@@ -2,8 +2,8 @@
 	Copyright 2025 Abdellah Allali
 */
 
+import tmp from 'tmp'
 import { FileSystem } from '../src/fileSystem'
-import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
@@ -11,16 +11,18 @@ describe('FileSystem - MKDIR command', () => {
 	let fs: FileSystem
 	let tempDir: string
 
+	// OS temp dir, not cwd: the ls suite lists cwd in parallel
+	let tempDirResult: tmp.DirResult
+
 	beforeEach(() => {
-		tempDir = `tmp-${randomUUID()}`
+		tempDirResult = tmp.dirSync({ unsafeCleanup: true })
+		tempDir = tempDirResult.name
 		fs = new FileSystem()
-		fs.mkdir(tempDir, { silent: true })
 		fs.cd(tempDir)
 	})
 
 	afterEach(() => {
-		fs.cd('..')
-		fs.delete(tempDir, { recursive: true }) // Automatically deletes temp directory
+		tempDirResult.removeCallback()
 	})
 
 	test('should throw error when no input given', () => {
