@@ -100,20 +100,20 @@ describe('FileSystem - COPY command', () => {
 		nodeFS.chmodSync(sourcePath, 0o000)
 		try {
 			expect(() => fs.copy(sourceFile, destFile)).toThrow(
-				/^EACCES: permission denied, copyfile/,
+				/EACCES: permission denied, copyfile/,
 			)
 		} finally {
 			nodeFS.chmodSync(sourcePath, 0o644)
 		}
 	})
 
-	test('should not throw an error when silent=true', () => {
+	test('should not throw an error when force=true', () => {
 		const sourceFile = 'source.txt'
 		const destFile = 'destination.txt'
 		expect(() => {
 			fs.touch(sourceFile, '#######')
 			fs.touch(destFile, '#######')
-			fs.copy(sourceFile, destFile, { silent: true })
+			fs.copy(sourceFile, destFile, { force: true })
 		}).not.toThrow()
 	})
 

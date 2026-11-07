@@ -10,6 +10,7 @@ export interface DeleteOptions {
 
 export interface MkdirOptions {
 	silent?: boolean
+	force?: boolean
 }
 
 export interface CopyOptions {

@@ -40,10 +40,10 @@ describe('FileSystem - MKDIR command', () => {
 		}).toThrow(`mkdir: cannot create directory '${src}': Directory exists`)
 	})
 
-	test('should not throw an error if the directory already exists and options.silent=true', () => {
+	test('should not throw an error if the directory already exists and options.force=true', () => {
 		expect(() => {
 			fs.mkdir('existing-dir-2')
-			fs.mkdir('existing-dir-2', { silent: true })
+			fs.mkdir('existing-dir-2', { force: true })
 		}).not.toThrow()
 	})
 
@@ -52,4 +52,5 @@ describe('FileSystem - MKDIR command', () => {
 		fs.mkdir('dir2')
 		expect(fs.ls()).toEqual(expect.arrayContaining(['dir1/', 'dir2/']))
 	})
+
 })

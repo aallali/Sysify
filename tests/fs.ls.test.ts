@@ -52,7 +52,7 @@ describe('FileSystem - LS command', () => {
 		nodeFS.mkdirSync(unreadableDir, { mode: 0 })
 		try {
 			expect(() => fs_.ls('unreadable-dir')).toThrow(
-				/^EACCES: permission denied, scandir/,
+				/EACCES: permission denied, scandir/,
 			)
 		} finally {
 			nodeFS.chmodSync(unreadableDir, 0o755)

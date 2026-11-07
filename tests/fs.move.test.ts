@@ -55,7 +55,7 @@ describe('FileSystem - MOVE command', () => {
 		}).toThrow(/move: 'destination.txt' already exists/)
 
 		expect(() => {
-			fs.move(sourceFile, destFile, { silent: true })
+			fs.move(sourceFile, destFile, { force: true })
 		}).not.toThrow()
 	})
 
@@ -148,7 +148,7 @@ describe('FileSystem - MOVE command', () => {
 		}
 	})
 
-	test('should not throw when move fails with silent option', () => {
+	test('should not throw when move fails with force option', () => {
 		fs.touch('source.txt', 'test content')
 
 		// Mock renameSync to throw a non-EXDEV error
@@ -157,12 +157,12 @@ describe('FileSystem - MOVE command', () => {
 			throw new Error('Permission denied')
 		})
 
-		// Should not throw with silent option
+		// Should not throw with force option
 		expect(() => {
-			fs.move('source.txt', 'destination.txt', { silent: true })
+			fs.move('source.txt', 'destination.txt', { force: true })
 		}).not.toThrow()
 
-		// Should throw without silent option
+		// Should throw without force option
 		expect(() => {
 			fs.move('source.txt', 'destination.txt')
 		}).toThrow('Permission denied')

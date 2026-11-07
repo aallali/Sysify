@@ -83,7 +83,7 @@ describe('FileSystem - TOUCH command with Buffer support', () => {
 
 		fs.touch(fileName)
 
-		expect(fs.ls()).toContain(fileName)		
+		expect(fs.ls()).toContain(fileName)
 		expect(fs.readFile(filePath, { encoding: 'utf-8' })).toBe('')
 	})
 })

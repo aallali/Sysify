@@ -116,7 +116,7 @@ export class FileSystem {
 				operation: 'mkdir',
 				message: `failed to create directory '${dirName}'`,
 				path: dirName,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 			})
@@ -140,6 +140,16 @@ export class FileSystem {
 		try {
 			const newDir = this.resolveCaseInsensitivePath(dirName)
 
+			if (!newDir) {
+				return this.handleError({
+					operation: 'cd',
+					message: `no such file or directory: ${dirName}`,
+					path: dirName,
+					silent,
+					force,
+				})
+			}
+
 			if (!fs.statSync(newDir).isDirectory()) {
 				return this.handleError({
 					operation: 'cd',
@@ -155,19 +165,16 @@ export class FileSystem {
 		} catch (error) {
 			return this.handleError({
 				operation: 'cd',
-				message:
-					error instanceof Error
-						? error.message
-						: `no such file or directory: ${dirName}`,
+				message: `no such file or directory: ${dirName}`,
 				path: dirName,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 			})
 		}
 	}
 
-	private resolveCaseInsensitivePath(dirName: string): string {
+	private resolveCaseInsensitivePath(dirName: string): string | null {
 		const resolvedPath = path.resolve(this.currentDir, dirName)
 
 		// If the path exists, return it directly
@@ -180,7 +187,7 @@ export class FileSystem {
 		const targetName = path.basename(resolvedPath)
 
 		if (!fs.existsSync(parentDir)) {
-			throw new Error(`cd: no such file or directory: ${parentDir}`)
+			return null
 		}
 
 		const dirContents = fs.readdirSync(parentDir)
@@ -188,11 +195,7 @@ export class FileSystem {
 			(entry) => entry.toLowerCase() === targetName.toLowerCase(),
 		)
 
-		if (!match) {
-			throw new Error(`cd: no such file or directory: ${dirName}`)
-		}
-
-		return path.join(parentDir, match)
+		return match ? path.join(parentDir, match) : null
 	}
 
 	/**
@@ -234,7 +237,7 @@ export class FileSystem {
 				operation: 'touch',
 				message: `failed to create file '${fileName}'`,
 				path: fileName,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 			})
@@ -260,7 +263,7 @@ export class FileSystem {
 			) {
 				return this.handleError<string[]>({
 					operation: 'ls',
-					message: `Path '${dirToRead}' does not exist or is not a directory`,
+					message: `Path '${dirToRead}' does not exist or is not a directory.`,
 					path: targetPath,
 					silent,
 					force,
@@ -280,7 +283,7 @@ export class FileSystem {
 				operation: 'ls',
 				message: `Failed to list files in: ${dirToRead}`,
 				path: targetPath,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 				returnValue: [], // Return empty array when force=true
@@ -345,12 +348,9 @@ export class FileSystem {
 		} catch (error) {
 			return this.handleError({
 				operation: 'delete',
-				message:
-					error instanceof Error
-						? error.message
-						: `error when deleting ${target}`,
+				message: `error when deleting ${target}`,
 				path: target,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 			})
@@ -416,8 +416,7 @@ export class FileSystem {
 						operation: 'copy',
 						message: `failed to copy '${source}' to '${destination}'`,
 						path: source,
-						originalError:
-							copyError instanceof Error ? copyError : undefined,
+						originalError: copyError as Error,
 						silent,
 						force,
 					})
@@ -473,12 +472,9 @@ export class FileSystem {
 		} catch (error) {
 			return this.handleError({
 				operation: 'copy',
-				message:
-					error instanceof Error
-						? error.message
-						: `error copying ${source} to ${destination}`,
+				message: `error copying ${source} to ${destination}`,
 				path: source,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 			})
@@ -531,11 +527,7 @@ export class FileSystem {
 				}
 			} catch (moveError) {
 				// If rename fails (possibly due to different filesystems), try copy + delete
-				if (
-					moveError instanceof Error &&
-					'code' in moveError &&
-					(moveError as { code?: string }).code === 'EXDEV'
-				) {
+				if ((moveError as NodeJS.ErrnoException).code === 'EXDEV') {
 					this.copy(source, destination, {
 						recursive: true,
 						overwrite,
@@ -552,8 +544,7 @@ export class FileSystem {
 						operation: 'move',
 						message: `failed to move '${source}' to '${destination}'`,
 						path: source,
-						originalError:
-							moveError instanceof Error ? moveError : undefined,
+						originalError: moveError as Error,
 						silent,
 						force,
 					})
@@ -562,12 +553,9 @@ export class FileSystem {
 		} catch (error) {
 			return this.handleError({
 				operation: 'move',
-				message:
-					error instanceof Error
-						? error.message
-						: `error moving ${source} to ${destination}`,
+				message: `error moving ${source} to ${destination}`,
 				path: source,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 			})
@@ -618,7 +606,7 @@ export class FileSystem {
 				operation: 'rename',
 				message: `failed to rename '${oldPath}' to '${newPath}'`,
 				path: oldPath,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 			})
@@ -672,12 +660,9 @@ export class FileSystem {
 		} catch (error) {
 			return this.handleError<string | Buffer>({
 				operation: 'readFile',
-				message:
-					error instanceof Error
-						? error.message
-						: `error reading ${filePath}`,
+				message: `error reading ${filePath}`,
 				path: filePath,
-				originalError: error instanceof Error ? error : undefined,
+				originalError: error as Error,
 				silent,
 				force,
 				returnValue: Buffer.alloc(0), // Return empty buffer when force=true
@@ -703,14 +688,16 @@ export class FileSystem {
 			force = false,
 		} = options
 
-		const code =
-			originalError && 'code' in originalError
-				? (originalError as { code?: string }).code
-				: undefined
+		// Already handled (and logged) inside the try block: don't re-wrap
+		if (originalError instanceof FileSystemError) throw originalError
 
-		// Always create the error object for consistent error details
+		const code = (originalError as NodeJS.ErrnoException | undefined)?.code
+		const fullMessage = originalError
+			? `${operation}: ${message}: ${originalError.message}`
+			: `${operation}: ${message}`
+
 		const fsError = new FileSystemError({
-			message,
+			message: fullMessage,
 			operation,
 			code,
 			path,
@@ -719,7 +706,7 @@ export class FileSystem {
 
 		// Handle logging (controlled by silent)
 		if (!silent) {
-			this.logger.error(`${operation}: ${message}`)
+			this.logger.error(fullMessage)
 		}
 
 		// Handle error propagation (controlled by force)
