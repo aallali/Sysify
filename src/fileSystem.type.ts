@@ -42,4 +42,6 @@ type BufferEncoding =
 export interface ReadFileOptions {
 	encoding?: BufferEncoding
 	flag?: string
+	silent?: boolean
+	force?: boolean
 }
