@@ -10,6 +10,10 @@
 			"types": "./dist/index.d.ts",
 			"default": "./dist/index.js"
 		},
+		"./promises": {
+			"types": "./dist/promises.d.ts",
+			"default": "./dist/promises.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"sideEffects": false,

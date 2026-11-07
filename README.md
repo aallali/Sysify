@@ -21,6 +21,7 @@ With `Sysify`, you can leverage commands like `mkdir`, `cd`, `ls`, `touch`, `rm`
 
 - **📂 Terminal-like commands**: `mkdir`, `cd`, `ls`, `touch`, `delete`, `copy`, `move`, `rename`, `readFile`, `writeFile`, `readJson`, `writeJson`, `chmod`, `exists`, `isFile`, `isDir`, `stat`.
 - **📍 Own working directory**: `cd` changes the instance's directory, never `process.cwd()`.
+- **⚡ Sync or async**: same API as Promises from `sysify/promises`.
 - **🔒 Optional sandbox**: `new FileSystem({ root })` rejects any path outside `root`.
 - **💾 Atomic writes**: `writeFile`/`writeJson` with `{ atomic: true }` never leave a half-written file.
 - **🛡️ Predictable errors**: every failure is a `FileSystemError` with an errno-style `code` (`ENOENT`, `EEXIST`, ...).
@@ -63,6 +64,22 @@ console.log(fs.readFile('readme.txt')) // Buffer
 fs.cd('../..')
 fs.delete('projects', { recursive: true }) // rm -r
 ```
+
+### Async
+
+Every command is also available as a Promise from `sysify/promises`, with the same options, error codes and messages:
+
+```typescript
+import { FileSystem } from 'sysify/promises'
+
+const fs = new FileSystem()
+await fs.mkdir('projects/demo', { recursive: true })
+await fs.cd('projects/demo')
+await fs.writeJson('config.json', { debug: true }, { atomic: true })
+console.log(await fs.ls()) // ['config.json']
+```
+
+`pwd()` and `getLogger()` stay synchronous. The working directory belongs to the instance, so don't run `cd` at the same time as other commands on the same instance.
 
 ---
 

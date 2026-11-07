@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **`sysify/promises`**: async `FileSystem` with the same commands, options, error codes and messages
 - **`root`** constructor option: sandbox the instance; paths resolving outside it fail with `EACCES`
 - **`readJson<T>(path)`** / **`writeJson(path, value, { spaces, atomic })`**; invalid JSON fails with `EJSON`
 - **`atomic`** option on `writeFile`: write a temp file then rename it over the target
