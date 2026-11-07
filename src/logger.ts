@@ -2,6 +2,8 @@
     Copyright 2025 Abdellah Allali
 */
 
+import { stripVTControlCharacters } from 'node:util'
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'off'
 
 export class Logger {
@@ -73,8 +75,11 @@ export class Logger {
 			| 'warn'
 			| 'error'
 
+		const line = `${timestamp}${coloredLevel}${coloredSource}:${Logger.MESSAGE_COLORS[level]}${args[0]}${Logger.RESET_COLOR}`
+		// No ANSI codes when piped to a file/CI or when NO_COLOR is set (https://no-color.org)
+		const useColor = process.stdout.isTTY && !process.env.NO_COLOR
 		console[logMethod](
-			`${timestamp}${coloredLevel}${coloredSource}:${Logger.MESSAGE_COLORS[level]}${args[0]}${Logger.RESET_COLOR}`,
+			useColor ? line : stripVTControlCharacters(line),
 			...args.slice(1),
 		)
 	}

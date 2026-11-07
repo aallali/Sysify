@@ -11,7 +11,6 @@ module.exports = {
 		"src/**/*.ts",
 		"!src/test.ts",
 		"!src/index.ts",
-		"!src/logger.ts",
 	],
 	testMatch: ['<rootDir>/tests/**/*.test.ts'],
 };
