@@ -17,6 +17,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run validate
+      - run: pnpm run build
       - run: pnpm run test:coverage
       - if: matrix.node-version == 24
         uses: codecov/codecov-action@v5
