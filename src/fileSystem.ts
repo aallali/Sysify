@@ -4,13 +4,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { Logger, type LogLevel } from './logger'
-import { FileSystemError } from './fileSystem.error'
+import { FileSystemBase, fail } from './base'
 import type {
 	CommandOptions,
 	CopyOptions,
 	DeleteOptions,
-	FileSystemOptions,
 	LsOptions,
 	MkdirOptions,
 	MoveOptions,
@@ -18,19 +16,6 @@ import type {
 	WriteFileOptions,
 	WriteJsonOptions,
 } from './fileSystem.type'
-
-/**
- * Throws a `FileSystemError` for a failure detected by Sysify itself
- * (as opposed to one raised by Node's `fs`).
- */
-function fail(
-	operation: string,
-	code: string,
-	message: string,
-	filePath?: string,
-): never {
-	throw new FileSystemError({ operation, code, message, path: filePath })
-}
 
 /**
  * Synchronous, shell-like file system API with its own working directory.
@@ -46,59 +31,7 @@ function fail(
  * fs.writeFile('notes.txt', 'hello')
  * fs.ls() // ['notes.txt']
  */
-export class FileSystem {
-	private currentDir: string
-	private root?: string
-	private logger: Logger
-	private defaultSilent: boolean
-	private defaultForce: boolean
-
-	/**
-	 * @param options - Global defaults applied to every command
-	 * @param options.silent - Don't log errors (default: `false`)
-	 * @param options.force - Don't throw errors (default: `false`)
-	 * @param options.logLevel - Logger level (default: `LOG_LEVEL` env, then `'warn'`)
-	 * @param options.root - Sandbox directory; paths outside it fail with `EACCES`
-	 * @throws {FileSystemError} `ENOTDIR` if `root` is not an existing directory
-	 */
-	constructor(options: FileSystemOptions = {}) {
-		this.defaultSilent = options.silent ?? false
-		this.defaultForce = options.force ?? false
-		this.currentDir = process.cwd()
-		if (options.root !== undefined) {
-			const root = path.resolve(options.root)
-			if (!fs.statSync(root, { throwIfNoEntry: false })?.isDirectory()) {
-				fail(
-					'FileSystem',
-					'ENOTDIR',
-					`root is not a directory: ${root}`,
-					root,
-				)
-			}
-			this.root = this.currentDir = root
-		}
-		this.logger = new Logger('sysify')
-		this.logger.setLevel(
-			options.logLevel || (process.env.LOG_LEVEL as LogLevel) || 'warn',
-		)
-		this.logger.debug(`Current directory: ${this.currentDir}`)
-	}
-
-	/**
-	 * Returns the logger used by this instance (e.g. to change its level).
-	 */
-	public getLogger(): Logger {
-		return this.logger
-	}
-
-	/**
-	 * Returns the current working directory (absolute path).
-	 * Starts at `process.cwd()`; only {@link cd} changes it.
-	 */
-	public pwd(): string {
-		return this.currentDir
-	}
-
+export class FileSystem extends FileSystemBase {
 	/**
 	 * Returns `true` if the path exists (file, directory or other). Never throws.
 	 * @param target - Absolute path, or relative to {@link pwd}
@@ -541,27 +474,6 @@ export class FileSystem {
 		})
 	}
 
-	/**
-	 * Resolves against {@link pwd}. With a `root`, throws `EACCES` for paths
-	 * outside it (`run` adds the operation name to the message).
-	 */
-	private resolve(target: string): string {
-		const resolved = path.resolve(this.currentDir, target)
-		if (this.root) {
-			const rel = path.relative(this.root, resolved)
-			// ponytail: lexical check only; a symlink inside root can still point out (realpath if that matters)
-			if (rel.startsWith('..') || path.isAbsolute(rel)) {
-				throw Object.assign(
-					new Error(
-						`path '${target}' is outside the root '${this.root}'`,
-					),
-					{ code: 'EACCES' },
-				)
-			}
-		}
-		return resolved
-	}
-
 	/** `stat` that returns `undefined` instead of throwing (missing, outside root...). */
 	private tryStat(target: string): fs.Stats | undefined {
 		try {
@@ -648,11 +560,7 @@ export class FileSystem {
 		return match ? path.join(parentDir, match) : null
 	}
 
-	/**
-	 * Runs a command with uniform error handling: wraps Node errors in
-	 * `FileSystemError` (keeping their `code`), logs unless `silent`,
-	 * throws unless `force` (then returns `fallback`).
-	 */
+	/** Runs `fn` with the shared error handling (see `handle`). */
 	private run<T>(
 		operation: string,
 		target: string | undefined,
@@ -663,22 +571,7 @@ export class FileSystem {
 		try {
 			return fn()
 		} catch (error) {
-			// Node fs errors fail `instanceof Error` across realms (e.g. Jest)
-			const err =
-				error instanceof FileSystemError
-					? error
-					: new FileSystemError({
-							operation,
-							message: (error as Error)?.message ?? String(error),
-							code: (error as NodeJS.ErrnoException)?.code,
-							path: target,
-							originalError: error as Error,
-						})
-			if (!(options.silent ?? this.defaultSilent)) {
-				this.logger.error(err.message)
-			}
-			if (!(options.force ?? this.defaultForce)) throw err
-			return fallback
+			return this.handle(operation, target, options, fallback, error)
 		}
 	}
 }
