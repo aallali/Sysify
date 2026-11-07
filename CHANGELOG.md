@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- **`root`** constructor option: sandbox the instance; paths resolving outside it fail with `EACCES`
+- **`readJson<T>(path)`** / **`writeJson(path, value, { spaces, atomic })`**; invalid JSON fails with `EJSON`
+- **`atomic`** option on `writeFile`: write a temp file then rename it over the target
+- **`ls(path, { recursive: true })`**
+- **`isFile(path)`**, **`isDir(path)`** and **`chmod(path, mode)`**
+
+### Fixed
+- `move` across devices could delete the source after a failed copy when the instance had `force: true`
+
 ## [0.2.0-beta.0] - 2026-11-07
 
 ### Added

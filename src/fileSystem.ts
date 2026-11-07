@@ -3,6 +3,7 @@
 */
 import fs from 'node:fs'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { Logger, type LogLevel } from './logger'
 import { FileSystemError } from './fileSystem.error'
 import type {
@@ -10,10 +11,12 @@ import type {
 	CopyOptions,
 	DeleteOptions,
 	FileSystemOptions,
+	LsOptions,
 	MkdirOptions,
 	MoveOptions,
 	ReadFileOptions,
 	WriteFileOptions,
+	WriteJsonOptions,
 } from './fileSystem.type'
 
 /**
@@ -45,6 +48,7 @@ function fail(
  */
 export class FileSystem {
 	private currentDir: string
+	private root?: string
 	private logger: Logger
 	private defaultSilent: boolean
 	private defaultForce: boolean
@@ -54,11 +58,25 @@ export class FileSystem {
 	 * @param options.silent - Don't log errors (default: `false`)
 	 * @param options.force - Don't throw errors (default: `false`)
 	 * @param options.logLevel - Logger level (default: `LOG_LEVEL` env, then `'warn'`)
+	 * @param options.root - Sandbox directory; paths outside it fail with `EACCES`
+	 * @throws {FileSystemError} `ENOTDIR` if `root` is not an existing directory
 	 */
 	constructor(options: FileSystemOptions = {}) {
 		this.defaultSilent = options.silent ?? false
 		this.defaultForce = options.force ?? false
 		this.currentDir = process.cwd()
+		if (options.root !== undefined) {
+			const root = path.resolve(options.root)
+			if (!fs.statSync(root, { throwIfNoEntry: false })?.isDirectory()) {
+				fail(
+					'FileSystem',
+					'ENOTDIR',
+					`root is not a directory: ${root}`,
+					root,
+				)
+			}
+			this.root = this.currentDir = root
+		}
 		this.logger = new Logger('sysify')
 		this.logger.setLevel(
 			options.logLevel || (process.env.LOG_LEVEL as LogLevel) || 'warn',
@@ -86,7 +104,40 @@ export class FileSystem {
 	 * @param target - Absolute path, or relative to {@link pwd}
 	 */
 	public exists(target: string): boolean {
-		return fs.existsSync(this.resolve(target))
+		return this.tryStat(target) !== undefined
+	}
+
+	/**
+	 * Returns `true` if the path is a file (symlinks are followed). Never throws.
+	 * @param target - Absolute path, or relative to {@link pwd}
+	 */
+	public isFile(target: string): boolean {
+		return this.tryStat(target)?.isFile() ?? false
+	}
+
+	/**
+	 * Returns `true` if the path is a directory (symlinks are followed). Never throws.
+	 * @param target - Absolute path, or relative to {@link pwd}
+	 */
+	public isDir(target: string): boolean {
+		return this.tryStat(target)?.isDirectory() ?? false
+	}
+
+	/**
+	 * Changes permissions, like `chmod`.
+	 * @param target - Absolute path, or relative to {@link pwd}
+	 * @param mode - Numeric (`0o755`) or octal string (`'755'`)
+	 * @throws {FileSystemError} `ENOENT` if missing, `EPERM` if not the owner
+	 */
+	public chmod(
+		target: string,
+		mode: number | string,
+		options: CommandOptions = {},
+	): void {
+		this.run('chmod', target, options, undefined, () => {
+			fs.chmodSync(this.resolve(target), mode)
+			this.logger.debug(`Mode of ${target} set to ${String(mode)}`)
+		})
 	}
 
 	/**
@@ -187,28 +238,76 @@ export class FileSystem {
 	 * @param data - String or `Buffer`
 	 * @param options.append - Append instead of replacing
 	 * @param options.encoding - Encoding for string data (default: `'utf8'`)
-	 * @throws {FileSystemError} e.g. `ENOENT` if the parent directory doesn't exist, `EISDIR`
+	 * @param options.atomic - Write a temp file then rename it over the target
+	 * @throws {FileSystemError} e.g. `ENOENT` if the parent directory doesn't exist, `EISDIR`, `EINVAL` for `append` + `atomic`
 	 */
 	public writeFile(
 		fileName: string,
 		data: string | Buffer,
 		options: WriteFileOptions = {},
 	): void {
-		this.run('writeFile', fileName, options, undefined, () => {
-			const filePath = this.resolve(fileName)
-			const write = options.append ? fs.appendFileSync : fs.writeFileSync
-			write(filePath, data, { encoding: options.encoding })
-			this.logger.debug(`File written: ${filePath}`)
+		this.run('writeFile', fileName, options, undefined, () =>
+			this.write('writeFile', fileName, data, options),
+		)
+	}
+
+	/**
+	 * Reads and parses a JSON file.
+	 * @param fileName - Absolute path, or relative to {@link pwd}
+	 * @returns The parsed value, or `undefined` on error with `force: true`
+	 * @throws {FileSystemError} `ENOENT`, `EISDIR`, `EJSON` if the content is not valid JSON
+	 * @example
+	 * const pkg = fs.readJson<{ version: string }>('package.json')
+	 */
+	public readJson<T = unknown>(
+		fileName: string,
+		options: CommandOptions = {},
+	): T | undefined {
+		return this.run('readJson', fileName, options, undefined, () => {
+			const text = this.readFile(fileName, {
+				encoding: 'utf8',
+				silent: true,
+				force: false,
+			})
+			try {
+				return JSON.parse(text) as T
+			} catch (error) {
+				fail(
+					'readJson',
+					'EJSON',
+					`invalid JSON in '${fileName}': ${(error as Error).message}`,
+					fileName,
+				)
+			}
+		})
+	}
+
+	/**
+	 * Serializes a value as JSON (with a trailing newline) and writes it.
+	 * @param fileName - Absolute path, or relative to {@link pwd}
+	 * @param options.spaces - Indentation (default: `2`)
+	 * @param options.atomic - Write a temp file then rename it over the target
+	 * @throws {FileSystemError} same as {@link writeFile}
+	 */
+	public writeJson(
+		fileName: string,
+		data: unknown,
+		options: WriteJsonOptions = {},
+	): void {
+		this.run('writeJson', fileName, options, undefined, () => {
+			const json = JSON.stringify(data, null, options.spaces ?? 2) + '\n'
+			this.write('writeJson', fileName, json, { atomic: options.atomic })
 		})
 	}
 
 	/**
 	 * Lists a directory. Directory names end with `/`.
 	 * @param targetPath - Directory to list (default: {@link pwd})
+	 * @param options.recursive - Include subdirectories (paths relative to `targetPath`)
 	 * @returns Entry names, or `[]` on error with `force: true`
 	 * @throws {FileSystemError} `ENOENT` if missing or not a directory, `EACCES`
 	 */
-	public ls(targetPath?: string, options: CommandOptions = {}): string[] {
+	public ls(targetPath?: string, options: LsOptions = {}): string[] {
 		return this.run('ls', targetPath, options, [], () => {
 			const dir = targetPath ? this.resolve(targetPath) : this.currentDir
 			if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
@@ -218,6 +317,16 @@ export class FileSystem {
 					`Path '${dir}' does not exist or is not a directory.`,
 					targetPath,
 				)
+			}
+			if (options.recursive) {
+				// ponytail: one lstat per entry; withFileTypes+recursive is buggy on early Node 20
+				return fs
+					.readdirSync(dir, { recursive: true, encoding: 'utf8' })
+					.map((rel) =>
+						fs.lstatSync(path.join(dir, rel)).isDirectory()
+							? `${rel}/`
+							: rel,
+					)
 			}
 			return fs
 				.readdirSync(dir, { withFileTypes: true })
@@ -426,8 +535,69 @@ export class FileSystem {
 		})
 	}
 
+	/**
+	 * Resolves against {@link pwd}. With a `root`, throws `EACCES` for paths
+	 * outside it (`run` adds the operation name to the message).
+	 */
 	private resolve(target: string): string {
-		return path.resolve(this.currentDir, target)
+		const resolved = path.resolve(this.currentDir, target)
+		if (this.root) {
+			const rel = path.relative(this.root, resolved)
+			// ponytail: lexical check only; a symlink inside root can still point out (realpath if that matters)
+			if (rel.startsWith('..') || path.isAbsolute(rel)) {
+				throw Object.assign(
+					new Error(
+						`path '${target}' is outside the root '${this.root}'`,
+					),
+					{ code: 'EACCES' },
+				)
+			}
+		}
+		return resolved
+	}
+
+	/** `stat` that returns `undefined` instead of throwing (missing, outside root...). */
+	private tryStat(target: string): fs.Stats | undefined {
+		try {
+			return fs.statSync(this.resolve(target), { throwIfNoEntry: false })
+		} catch {
+			return undefined
+		}
+	}
+
+	/** Shared body of `writeFile` / `writeJson`; must run inside `run`. */
+	private write(
+		operation: string,
+		fileName: string,
+		data: string | Buffer,
+		options: Omit<WriteFileOptions, keyof CommandOptions>,
+	): void {
+		const filePath = this.resolve(fileName)
+		const { encoding } = options
+		if (options.append && options.atomic) {
+			fail(
+				operation,
+				'EINVAL',
+				'append and atomic cannot be combined',
+				fileName,
+			)
+		}
+		if (options.append) {
+			fs.appendFileSync(filePath, data, { encoding })
+		} else if (options.atomic) {
+			// ponytail: the temp file gets default permissions, not the old file's mode
+			const tmp = `${filePath}.${randomUUID()}.tmp`
+			try {
+				fs.writeFileSync(tmp, data, { encoding })
+				fs.renameSync(tmp, filePath)
+			} catch (error) {
+				fs.rmSync(tmp, { force: true })
+				throw error
+			}
+		} else {
+			fs.writeFileSync(filePath, data, { encoding })
+		}
+		this.logger.debug(`File written: ${filePath}`)
 	}
 
 	/** Shared source/destination checks for `copy` and `move`. */

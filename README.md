@@ -19,8 +19,10 @@ With `Sysify`, you can leverage commands like `mkdir`, `cd`, `ls`, `touch`, `rm`
 
 ## ✨ Features
 
-- **📂 Terminal-like commands**: `mkdir`, `cd`, `ls`, `touch`, `delete`, `copy`, `move`, `rename`, `readFile`, `writeFile`, `exists`, `stat`.
+- **📂 Terminal-like commands**: `mkdir`, `cd`, `ls`, `touch`, `delete`, `copy`, `move`, `rename`, `readFile`, `writeFile`, `readJson`, `writeJson`, `chmod`, `exists`, `isFile`, `isDir`, `stat`.
 - **📍 Own working directory**: `cd` changes the instance's directory, never `process.cwd()`.
+- **🔒 Optional sandbox**: `new FileSystem({ root })` rejects any path outside `root`.
+- **💾 Atomic writes**: `writeFile`/`writeJson` with `{ atomic: true }` never leave a half-written file.
 - **🛡️ Predictable errors**: every failure is a `FileSystemError` with an errno-style `code` (`ENOENT`, `EEXIST`, ...).
 - **🔇 `silent` / `force` everywhere**: choose per call (or globally) whether errors are logged and whether they throw.
 - **📚 Fully typed**: TypeScript types and JSDoc for every method; works from ESM and CommonJS.
@@ -72,13 +74,17 @@ Paths can be absolute or relative to `pwd()`. Every command also accepts `silent
 | --- | --- | --- |
 | `pwd()` | Current working directory (starts at `process.cwd()`) | |
 | `cd(dir)` | Change directory (falls back to a case-insensitive match) | |
-| `ls(dir?)` | List entries; directories end with `/` | |
+| `ls(dir?, opts?)` | List entries; directories end with `/` | `recursive` |
 | `exists(path)` | `true` if the path exists, never throws | |
+| `isFile(path)` / `isDir(path)` | Type checks, never throw | |
 | `stat(path)` | `fs.Stats` (size, mode, dates, `isFile()`, ...) | |
+| `chmod(path, mode)` | Change permissions (`0o755` or `'755'`) | |
 | `mkdir(dir, opts?)` | Create a directory | `recursive` |
 | `touch(file, content?)` | Create a **new** file (string or `Buffer`) | |
-| `writeFile(file, data, opts?)` | Create or overwrite a file | `append`, `encoding` |
+| `writeFile(file, data, opts?)` | Create or overwrite a file | `append`, `encoding`, `atomic` |
 | `readFile(file, opts?)` | `string` with `encoding`, otherwise `Buffer` | `encoding`, `flag` |
+| `readJson<T>(file)` | Read and parse JSON (`EJSON` if invalid) | |
+| `writeJson(file, value, opts?)` | Write pretty JSON + trailing newline | `spaces`, `atomic` |
 | `copy(src, dest, opts?)` | Copy a file or directory | `recursive`, `overwrite` |
 | `move(src, dest, opts?)` | Move (copy + delete across devices) | `overwrite` |
 | `rename(old, new)` | Rename; never replaces an existing path | |
@@ -109,7 +115,7 @@ try {
 | Option | Default | Effect |
 | --- | --- | --- |
 | `silent` | `false` | Don't log the error |
-| `force` | `false` | Don't throw; return a fallback (`[]` for `ls`, `undefined` for `stat`, empty `string`/`Buffer` for `readFile`) |
+| `force` | `false` | Don't throw; return a fallback (`[]` for `ls`, `undefined` for `stat`/`readJson`, empty `string`/`Buffer` for `readFile`) |
 
 Set them per call, or as defaults for the whole instance:
 
@@ -118,6 +124,16 @@ const fs = new FileSystem({ silent: true, force: true, logLevel: 'error' })
 fs.ls('maybe-missing') // [] instead of throwing
 fs.ls('must-exist', { force: false }) // per-call options win
 ```
+
+### Sandbox
+
+```typescript
+const fs = new FileSystem({ root: '/srv/uploads' })
+fs.pwd() // '/srv/uploads'
+fs.readFile('../../etc/passwd') // throws FileSystemError, code 'EACCES'
+```
+
+The check is on the resolved path, so a symlink inside `root` can still point outside it.
 
 ---
 

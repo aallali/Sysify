@@ -51,4 +51,24 @@ describe('FileSystem - WRITEFILE command', () => {
 			expect.objectContaining({ code: 'EISDIR' }),
 		)
 	})
+
+	test('atomic write replaces content and leaves no temp file', () => {
+		fs.writeFile('a.txt', 'old')
+		fs.writeFile('a.txt', 'new', { atomic: true })
+		expect(fs.readFile('a.txt', { encoding: 'utf8' })).toBe('new')
+		expect(fs.ls()).toEqual(['a.txt'])
+	})
+
+	test('atomic write cleans up its temp file on failure', () => {
+		fs.mkdir('dir')
+		fs.touch('dir/keep')
+		expect(() => fs.writeFile('dir', 'x', { atomic: true })).toThrow()
+		expect(fs.ls().sort()).toEqual(['dir/'])
+	})
+
+	test('append + atomic throws EINVAL', () => {
+		expect(() =>
+			fs.writeFile('a.txt', 'x', { append: true, atomic: true }),
+		).toThrow(expect.objectContaining({ code: 'EINVAL' }))
+	})
 })

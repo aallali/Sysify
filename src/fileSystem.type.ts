@@ -37,6 +37,8 @@ export interface MoveOptions extends CommandOptions {
 export interface WriteFileOptions extends CommandOptions {
 	/** Append to the file instead of replacing its content. */
 	append?: boolean
+	/** Write to a temp file then rename it, so readers never see a partial file. Can't be combined with `append`. */
+	atomic?: boolean
 	/** Encoding used when `data` is a string (default: `'utf8'`). */
 	encoding?: BufferEncoding
 }
@@ -48,7 +50,24 @@ export interface ReadFileOptions extends CommandOptions {
 	flag?: string
 }
 
+export interface WriteJsonOptions extends CommandOptions {
+	/** Indentation passed to `JSON.stringify` (default: `2`). */
+	spaces?: number | string
+	/** See {@link WriteFileOptions.atomic}. */
+	atomic?: boolean
+}
+
+export interface LsOptions extends CommandOptions {
+	/** List subdirectories too; entries are paths relative to the listed directory. */
+	recursive?: boolean
+}
+
 export interface FileSystemOptions extends CommandOptions {
+	/**
+	 * Sandbox directory: the working directory starts here and any path that
+	 * resolves outside it fails with `EACCES`.
+	 */
+	root?: string
 	/** Logger level (default: `LOG_LEVEL` env variable, then `'warn'`). */
 	logLevel?: LogLevel
 }
